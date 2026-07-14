@@ -1,0 +1,179 @@
+---
+import Layout from "../layouts/Layout.astro";
+import site from "../data/site.json";
+
+// Spotify / Apple Music の通常のURLを埋め込みプレイヤーのURLに変換する。
+// 例: https://open.spotify.com/playlist/xxxx
+//   → https://open.spotify.com/embed/playlist/xxxx
+// 例: https://music.apple.com/jp/playlist/名前/pl.xxxx
+//   → https://embed.music.apple.com/jp/playlist/名前/pl.xxxx
+function toEmbed(
+  raw: string,
+): { src: string; height: number; service: string } | null {
+  const url = raw.trim();
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname === "open.spotify.com") {
+      const m = u.pathname.match(
+        /^(?:\/intl-[a-z]+)?\/(playlist|album|track|artist|episode|show)\/([A-Za-z0-9]+)/,
+      );
+      if (m) {
+        return {
+          src: `https://open.spotify.com/embed/${m[1]}/${m[2]}`,
+          height: m[1] === "track" || m[1] === "episode" ? 152 : 352,
+          service: "Spotify",
+        };
+      }
+    }
+    if (u.hostname === "music.apple.com") {
+      const isSong = u.searchParams.has("i") || u.pathname.includes("/song/");
+      return {
+        src: `https://embed.music.apple.com${u.pathname}${u.search}`,
+        height: isSong ? 175 : 450,
+        service: "Apple Music",
+      };
+    }
+  } catch {
+    /* 不正なURLは無視 */
+  }
+  return null;
+}
+
+const music = site.music as Record<string, string>;
+const slots = ["spotify1", "spotify2", "apple1", "apple2"] as const;
+const embeds = slots
+  .map((key) => ({ key, embed: toEmbed(music[key] ?? "") }))
+  .filter((e) => e.embed !== null);
+---
+
+<Layout title="音楽 | Shuichi Tani" description="お気に入りの音楽・プレイリスト">
+  <h1><span class="en">Music</span>音楽</h1>
+
+  <p class="lead" data-edit="music.intro">{site.music.intro}</p>
+
+  {
+    embeds.length > 0 ? (
+      <div class="players">
+        {embeds.map(({ key, embed }) => (
+          <figure>
+            <iframe
+              src={embed!.src}
+              height={embed!.height}
+              width="100%"
+              frameborder="0"
+              allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+              loading="lazy"
+              title={`${embed!.service} player (${key})`}
+            />
+          </figure>
+        ))}
+      </div>
+    ) : (
+      <div class="empty">
+        <p>まだプレイリストが設定されていません。設定方法:</p>
+        <ol>
+          <li>
+            Spotify: プレイリスト(またはアルバム・曲)を開き、「…」→「シェア」→「リンクをコピー」
+          </li>
+          <li>
+            Apple Music: プレイリストを開き、「…」→「共有」→「リンクをコピー」
+            (公開プレイリストのみ埋め込み可能)
+          </li>
+          <li>
+            画面右下の「✎ 編集」→ 下の設定パネルにURLを貼り付け → 保存
+          </li>
+        </ol>
+      </div>
+    )
+  }
+
+  <!-- プレイリスト設定パネル(編集モード中のみ表示) -->
+  <div id="music-editor">
+    <p class="music-editor-title">
+      プレイリストの設定(Spotify / Apple Music のURLを貼り付け。空欄で非表示)
+    </p>
+    <dl>
+      <dt>Spotify 1</dt>
+      <dd data-edit="music.spotify1">{music.spotify1}</dd>
+      <dt>Spotify 2</dt>
+      <dd data-edit="music.spotify2">{music.spotify2}</dd>
+      <dt>Apple Music 1</dt>
+      <dd data-edit="music.apple1">{music.apple1}</dd>
+      <dt>Apple Music 2</dt>
+      <dd data-edit="music.apple2">{music.apple2}</dd>
+    </dl>
+  </div>
+</Layout>
+
+<style>
+  .lead {
+    font-size: 1.02rem;
+    margin-bottom: 2rem;
+  }
+
+  .players {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .players figure {
+    margin: 0;
+  }
+
+  .players iframe {
+    border-radius: 12px;
+    display: block;
+  }
+
+  .empty {
+    color: var(--text-muted);
+    background: var(--panel);
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+  }
+
+  .empty ol {
+    margin-bottom: 0;
+  }
+
+  /* プレイリスト設定パネル(編集モード中のみ) */
+  #music-editor {
+    display: none;
+    margin-top: 2.5rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  :global(body.editing) #music-editor {
+    display: block;
+  }
+
+  .music-editor-title {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  #music-editor dl {
+    display: grid;
+    grid-template-columns: 8em 1fr;
+    gap: 0.3rem 0.8rem;
+    margin: 0;
+  }
+
+  #music-editor dt {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  #music-editor dd {
+    margin: 0;
+    font-size: 0.82rem;
+    min-height: 1.5em;
+    word-break: break-all;
+  }
+</style>

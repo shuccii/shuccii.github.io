@@ -1,0 +1,165 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getCollection, render } from "astro:content";
+import { Image } from "astro:assets";
+import { getPhotos, getVideos } from "../../lib/media";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const d = post.data.date;
+const fmt = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+
+// frontmatter で指定された写真・ビデオを assets から引き当てる
+const allPhotos = getPhotos();
+const allVideos = getVideos();
+const postPhotos = post.data.photos
+  .map((file) => allPhotos.find((p) => p.file === file))
+  .filter((p) => p !== undefined);
+const postVideos = post.data.videos
+  .map((file) => allVideos.find((v) => v.file === file))
+  .filter((v) => v !== undefined);
+---
+
+<Layout title={`${post.data.title} | Shuichi Tani`} description={post.data.description}>
+  <article>
+    <header class="post-header">
+      <h1>{post.data.title}</h1>
+      <p class="meta">
+        <time>{fmt}</time>
+        {
+          post.data.tags.map((tag) => (
+            <a class="tag" href={`/search/?q=${encodeURIComponent(tag)}`}>
+              {tag}
+            </a>
+          ))
+        }
+      </p>
+    </header>
+
+    <div class="post-body">
+      <Content />
+    </div>
+
+    {
+      postPhotos.length > 0 && (
+        <section class="post-media">
+          <h2>
+            <span class="en">Photos</span>この記事の写真
+          </h2>
+          <div class="media-grid">
+            {postPhotos.map((photo) => (
+              <figure>
+                <Image src={photo.image} alt={photo.name} width={640} loading="lazy" />
+                <figcaption>{photo.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      postVideos.length > 0 && (
+        <section class="post-media">
+          <h2>
+            <span class="en">Videos</span>この記事のビデオ
+          </h2>
+          <div class="video-grid">
+            {postVideos.map((video) => (
+              <figure>
+                <video src={video.url} controls preload="metadata" />
+                <figcaption>{video.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )
+    }
+  </article>
+
+  <p class="back"><a href="/blog/">← 記事一覧に戻る</a></p>
+</Layout>
+
+<style>
+  .post-header h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.75rem;
+  }
+
+  .post-media h2 {
+    margin-top: 3rem;
+  }
+
+  .media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .media-grid figure {
+    margin: 0;
+  }
+
+  .media-grid :global(img) {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .video-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .video-grid figure {
+    margin: 0;
+  }
+
+  .video-grid video {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: #000;
+  }
+
+  figcaption {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+  }
+
+  .back {
+    margin-top: 3.5rem;
+  }
+</style>
+
+<style is:global>
+  .post-body img,
+  .post-body video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+</style>

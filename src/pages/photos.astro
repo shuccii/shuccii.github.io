@@ -1,0 +1,111 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Image } from "astro:assets";
+import { getPhotos, getMediaPostMap } from "../lib/media";
+
+const photos = getPhotos();
+const postMap = await getMediaPostMap();
+---
+
+<Layout title="写真 | Shuichi Tani">
+  <h1><span class="en">Photo</span>写真</h1>
+  <p class="hint">
+    ここに追加した写真は、サイト全体の背景としてもランダムに表示されます。
+    ブログ記事に使われている写真は、クリックすると記事へ移動します。
+  </p>
+  {
+    photos.length > 0 ? (
+      <div class="gallery">
+        {photos.map((photo) => {
+          const refs = postMap.get(photo.file) ?? [];
+          const post = refs[0];
+          return (
+            <figure>
+              {post ? (
+                <a href={`/blog/${post.slug}/`} title={`記事「${post.title}」を読む`}>
+                  <Image src={photo.image} alt={photo.name} width={640} loading="lazy" />
+                </a>
+              ) : (
+                <Image src={photo.image} alt={photo.name} width={640} loading="lazy" />
+              )}
+              <figcaption>
+                {photo.name}
+                {post && (
+                  <a class="post-link" href={`/blog/${post.slug}/`}>
+                    📝 {post.title}
+                  </a>
+                )}
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
+    ) : (
+      <div class="empty">
+        <p>まだ写真がありません。</p>
+        <p>
+          <code>src/assets/photos/</code> に画像ファイル(jpg / png / webp
+          など)を入れると、このページと背景に自動的に反映されます。
+          ファイル名がキャプションになります(例:
+          <code>2026-07-14_研究室の風景.jpg</code>)。
+        </p>
+      </div>
+    )
+  }
+</Layout>
+
+<style>
+  .hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1.75rem;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  figure :global(img) {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    transition: opacity 0.25s ease;
+  }
+
+  figure a:hover :global(img) {
+    opacity: 0.85;
+  }
+
+  figcaption {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    line-height: 1.6;
+  }
+
+  .post-link {
+    display: block;
+    font-size: 0.8rem;
+    margin-top: 0.1rem;
+  }
+
+  .empty {
+    color: var(--text-muted);
+    background: var(--panel);
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+  }
+
+  .empty p:last-child {
+    margin-bottom: 0;
+  }
+</style>

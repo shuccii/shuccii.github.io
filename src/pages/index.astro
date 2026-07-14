@@ -1,0 +1,466 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+import { Image } from "astro:assets";
+import { getTileImageUrls, getPhotos } from "../lib/media";
+import site from "../data/site.json";
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+const recentPosts = posts.slice(0, 8);
+const recentPhotos = getPhotos().slice(0, 4);
+
+const fmt = (d: Date) =>
+  `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+
+// 各ページへのセクションタイル(背景写真は backgrounds から順に割り当て)
+const tileImages = getTileImageUrls();
+const tiles = [
+  { href: "/blog/", en: "Blog", ja: "ブログ", desc: site.home.secBlog },
+  { href: "/photos/", en: "Photo", ja: "写真", desc: site.home.secPhoto },
+  { href: "/videos/", en: "Video", ja: "ビデオ", desc: site.home.secVideo },
+  { href: "/music/", en: "Music", ja: "音楽", desc: site.home.secMusic },
+  { href: "/profile/", en: "Profile", ja: "プロフィール", desc: site.home.secProfile },
+  { href: "/research/", en: "Research", ja: "研究", desc: site.home.secResearch },
+].map((tile, i) => ({
+  ...tile,
+  image: tileImages.length > 0 ? tileImages[i % tileImages.length] : null,
+}));
+---
+
+<Layout title="余白の庭 | Shuichi Tani">
+  <section class="hero">
+    <p class="hero-en" data-edit="home.titleEn">{site.home.titleEn}</p>
+    <h1 class="hero-title" data-edit="home.title">{site.home.title}</h1>
+    <p class="hero-byline" data-edit="home.byline">{site.home.byline}</p>
+
+    <div class="manifesto">
+      <p class="m-line" data-edit="home.manifesto1">{site.home.manifesto1}</p>
+      <p class="m-line" data-edit="home.manifesto2">{site.home.manifesto2}</p>
+      <p class="m-line" data-edit="home.manifesto3">{site.home.manifesto3}</p>
+      <p class="m-line" data-edit="home.manifesto4">{site.home.manifesto4}</p>
+    </div>
+
+    <p class="hero-lead" data-edit="home.lead">{site.home.lead}</p>
+    <p class="scroll-cue" aria-hidden="true">SCROLL<span></span></p>
+  </section>
+
+  <section class="tiles">
+    {
+      tiles.map((tile, i) => (
+        <a class="tile" href={tile.href} style={`--delay: ${i * 0.06}s`}>
+          {tile.image && (
+            <span
+              class="tile-bg"
+              style={`background-image: url("${tile.image}")`}
+              aria-hidden="true"
+            />
+          )}
+          <span class="tile-body">
+            <span class="tile-en">{tile.en}</span>
+            <span class="tile-ja">{tile.ja}</span>
+            <span class="tile-desc" data-edit={`home.sec${tile.en}`}>
+              {tile.desc}
+            </span>
+            <span class="tile-more">View more →</span>
+          </span>
+        </a>
+      ))
+    }
+  </section>
+
+  <h2><span class="en">Updates</span>最近の更新</h2>
+  <p class="updates-hint">→ 横にスクロールできます</p>
+  <div class="updates-strip">
+    {
+      recentPosts.map((post) => (
+        <a class="update-card" href={`/blog/${post.id}/`}>
+          <span class="update-type">BLOG</span>
+          <span class="update-date">{fmt(post.data.date)}</span>
+          <span class="update-title">{post.data.title}</span>
+          {post.data.description && (
+            <span class="update-desc">{post.data.description}</span>
+          )}
+        </a>
+      ))
+    }
+    {
+      recentPhotos.map((photo) => (
+        <a class="update-card photo-card" href="/photos/">
+          <Image src={photo.image} alt={photo.name} width={480} loading="lazy" />
+          <span class="update-type">PHOTO</span>
+          <span class="update-title">{photo.name}</span>
+        </a>
+      ))
+    }
+    {
+      recentPosts.length === 0 && recentPhotos.length === 0 && (
+        <p>まだ更新がありません。</p>
+      )
+    }
+  </div>
+</Layout>
+
+<style>
+  .hero {
+    min-height: 56vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem 0 3rem;
+    position: relative;
+  }
+
+  .hero-en {
+    font-size: 0.75rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+
+  .hero-title {
+    font-size: 2.6rem;
+    letter-spacing: 0.24em;
+    margin-bottom: 0.6rem;
+    animation: heroIn 1s ease both;
+  }
+
+  .hero-en {
+    animation: heroIn 1s ease both;
+  }
+
+  .hero-byline {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 2.1rem;
+    animation: heroIn 1s ease 0.15s both;
+  }
+
+  @keyframes heroIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* 余白の庭: 意味を語る4行(1行ずつ順にふわっと現れる) */
+  .manifesto {
+    max-width: 34em;
+    border-left: 1px solid var(--border);
+    padding-left: 1.3rem;
+    margin-bottom: 2rem;
+  }
+
+  .m-line {
+    font-size: 0.95rem;
+    line-height: 2.1;
+    color: var(--text);
+    margin-bottom: 0.15rem;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: mLineIn 0.9s ease forwards;
+  }
+
+  .m-line:nth-child(1) {
+    animation-delay: 0.35s;
+  }
+  .m-line:nth-child(2) {
+    animation-delay: 0.65s;
+  }
+  .m-line:nth-child(3) {
+    animation-delay: 0.95s;
+  }
+  .m-line:nth-child(4) {
+    animation-delay: 1.25s;
+  }
+
+  @keyframes mLineIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title,
+    .hero-en,
+    .hero-byline,
+    .m-line {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .hero-lead {
+    max-width: 34em;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+
+  .scroll-cue {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    font-size: 0.62rem;
+    letter-spacing: 0.35em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .scroll-cue span {
+    display: inline-block;
+    width: 56px;
+    height: 1px;
+    background: var(--text-muted);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scroll-cue span::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    animation: cue 2.2s ease-in-out infinite;
+  }
+
+  @keyframes cue {
+    0% {
+      transform: translateX(-100%);
+    }
+    60%,
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* セクションタイル */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.1rem;
+    margin-bottom: 2rem;
+  }
+
+  .tile {
+    position: relative;
+    display: block;
+    min-height: 230px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    color: #fff;
+    background: #33404e;
+    transition:
+      transform 0.45s cubic-bezier(0.2, 0.6, 0.2, 1),
+      box-shadow 0.45s ease;
+  }
+
+  .tile:first-child {
+    grid-column: 1 / -1;
+    min-height: 260px;
+  }
+
+  .tile:hover {
+    text-decoration: none;
+    transform: translateY(-4px);
+    box-shadow: 0 14px 32px rgba(20, 30, 45, 0.18);
+  }
+
+  .tile-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.9s cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+
+  .tile:hover .tile-bg {
+    transform: scale(1.07);
+  }
+
+  /* クリック時: 写真がぐっとズームして白フェードで遷移 */
+  .tile.leaving .tile-bg {
+    transform: scale(1.16);
+    transition: transform 0.5s ease;
+  }
+
+  .tile.leaving {
+    transform: translateY(-4px) scale(1.015);
+  }
+
+  .tile-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(15, 22, 32, 0.78),
+      rgba(15, 22, 32, 0.28) 55%,
+      rgba(15, 22, 32, 0.15)
+    );
+    transition: background 0.45s ease;
+  }
+
+  .tile-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: inherit;
+    padding: 1.4rem 1.5rem;
+  }
+
+  .tile-en {
+    font-size: 0.66rem;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .tile-ja {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    margin: 0.15rem 0 0.3rem;
+  }
+
+  .tile-desc {
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.88);
+    max-width: 36em;
+  }
+
+  .tile-more {
+    margin-top: 0.7rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.75);
+    transition:
+      color 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  .tile:hover .tile-more {
+    color: #fff;
+    transform: translateX(6px);
+  }
+
+  /* 最近の更新(横スクロール) */
+  .updates-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 0.8rem;
+  }
+
+  .updates-strip {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.25rem 0.25rem 1.25rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .updates-strip::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .updates-strip::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .update-card {
+    flex: 0 0 240px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 1.2rem;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    transition:
+      transform 0.35s ease,
+      box-shadow 0.35s ease,
+      border-color 0.35s ease;
+  }
+
+  .update-card:hover {
+    text-decoration: none;
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 24px rgba(20, 30, 45, 0.1);
+  }
+
+  .update-type {
+    font-size: 0.62rem;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+  }
+
+  .update-date {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+  }
+
+  .update-title {
+    font-weight: 600;
+    line-height: 1.7;
+    margin-top: 0.3rem;
+  }
+
+  .update-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-top: 0.3rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .photo-card {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .photo-card :global(img) {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+  }
+
+  .photo-card .update-type {
+    margin: 0.7rem 1.2rem 0;
+  }
+
+  .photo-card .update-title {
+    margin: 0.1rem 1.2rem 0.9rem;
+    font-size: 0.88rem;
+  }
+
+  @media (max-width: 480px) {
+    .hero-title {
+      font-size: 1.9rem;
+    }
+  }
+</style>

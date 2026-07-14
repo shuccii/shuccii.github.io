@@ -1,0 +1,70 @@
+{
+  "home": {
+    "title": "余白の庭",
+    "titleEn": "The Garden of Margin",
+    "byline": "Shuichi Tani",
+    "manifesto1": "「余白」とは、何もない空間ではなく、まだ何かが入る余地のこと。",
+    "manifesto2": "研究や日記、写真、音楽のあいだに、言葉になる前の考えや感情を置いておける場所。",
+    "manifesto3": "完成品だけでなく、途中の思考も、白い余白の中で静かに呼吸している。",
+    "manifesto4": "庭のように、植えたものだけでなく風や季節も入り込む——まだ育ちきっていない思考を置いておける庭。",
+    "lead": "奈良先端科学技術大学院大学(NAIST)の大学院生。機械学習を用いた核融合炉材料の物性予測(Materials Informatics)を研究しています。",
+    "blogIntro": "日々の記録や研究メモを書いています。",
+    "secBlog": "日々の記録や研究メモ。読んだ論文のことや、学んだことを書いています。",
+    "secPhoto": "撮りためた写真。風景や日常のひとコマを載せています。",
+    "secVideo": "動画のアーカイブ。制作したものや記録映像など。",
+    "secProfile": "自己紹介。経歴、スキル、関心のあることについて。",
+    "secResearch": "研究紹介。核融合炉材料 × 機械学習(Materials Informatics)。",
+    "secMusic": "お気に入りの音楽。よく聴いているプレイリストを置いています。"
+  },
+  "profile": {
+    "lead": "医工学から材料科学 × 情報科学へ。データの力で核融合炉材料の開発を加速することを目指しています。",
+    "message": "実験が難しい領域だからこそ、データを賢く使う工夫に面白さを感じています。少ないデータから確かな予測を引き出す方法を、一歩ずつ学びながら研究しています。",
+    "name": "谷 周一(Shuichi Tani)",
+    "affiliation": "奈良先端科学技術大学院大学(NAIST) 材料科学・情報科学領域",
+    "specialty": "Materials Informatics(MI)、機械学習による材料物性予測、データ同化・異種データ統合",
+    "background": "学部では医工学系を専攻し、大学院から材料科学 × 情報科学の研究に取り組む",
+    "timeline1": "◯◯大学 医工学系で学ぶ(大学名・年は編集モードで記入してください)",
+    "timeline2": "奈良先端科学技術大学院大学(NAIST)に入学。材料科学 × 情報科学の研究を開始",
+    "timeline3": "現在: 核融合炉材料の異種データ統合モデル開発(ムーンショット目標10関連)に従事",
+    "skillsML": "回帰(線形回帰・Lasso・PLS・SVR・XGBoost)、分類(kNN・Random Forest)、クラスタリング、PCA・UMAP、交差検証と再現性の管理",
+    "skillsPython": "Python によるデータ解析・可視化、Jupyter Notebook での実験と整理、scikit-learn を中心とした機械学習の実装",
+    "skillsTools": "Git / GitHub、uv による環境管理、VS Code、スライド・レポート作成",
+    "interests": "ここに趣味や関心事を書く(Webの編集モードから直接書き換えられます)",
+    "qualifications": "資格・受賞歴など(あれば編集モードで記入してください)"
+  },
+  "research": {
+    "lead": "機械学習を用いた核融合炉材料の物性予測(Materials Informatics)に取り組んでいます。ムーンショット目標10(フュージョンエネルギー)関連プロジェクトの文脈で、「核融合炉材料の異種データ統合モデル開発」がテーマです。",
+    "bg1": "核融合炉の実現には、中性子照射や高温環境に耐える構造材料(低放射化フェライト/マルテンサイト鋼、タングステンなど)の開発が不可欠です。しかし、こうした材料の実験には特殊な環境が必要なため、得られるデータの種類と数が非常に限られています。",
+    "bg2": "そこで、実験データ・第一原理計算・シミュレーションといった性質の異なるデータ(異種データ)を統合し、少量のデータからでも高精度に材料物性を予測することが主要な課題となります。",
+    "task1": "中性子照射下での構造材料劣化予測",
+    "task2": "機能性材料の異種データ統合",
+    "task3": "異種データ統合モデルにおけるデータの秘匿性検証(連合学習・プライバシー保護機械学習)",
+    "keywords": [
+      "Materials Informatics",
+      "データ同化",
+      "転移学習",
+      "マルチタスク学習",
+      "マルチフィデリティモデリング",
+      "ベイズ最適化",
+      "不確かさ定量化",
+      "核融合炉構造材料",
+      "機械学習",
+      "Python"
+    ]
+  },
+  "music": {
+    "intro": "よく聴いているプレイリストです。気になったらそのまま再生してみてください。",
+    "spotify1": "https://open.spotify.com/playlist/1lV7GRTkT6QYFp4QftPSYV?si=0d2785cd135845db",
+    "spotify2": "https://open.spotify.com/playlist/0nHXAsAKZGg5cQYHsKH9Mt?si=0c812980b0684aab",
+    "apple1": "https://music.apple.com/jp/playlist/%E3%82%A2%E3%82%B8%E3%82%AB%E3%83%B3-%E3%81%8A%E3%81%99%E3%81%99%E3%82%81%E6%9B%B2/pl.u-8aAVE39ioX8KYzr",
+    "apple2": "https://music.apple.com/jp/playlist/2026-%E6%98%A5%E5%A4%8F/pl.u-6mo4rmKsB7NDkY9"
+  },
+  "sns": {
+    "instagram": "https://www.instagram.com/shu_ssaw?igsh=MWg4aHlmcW8zdWhlYg%3D%3D&utm_source=qr",
+    "x": "",
+    "youtube": "",
+    "facebook": "",
+    "linkedin": "",
+    "other": ""
+  }
+}

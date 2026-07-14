@@ -1,0 +1,200 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="検索 | Shuichi Tani" description="サイト内検索">
+  <h1><span class="en">Search</span>サイト内検索</h1>
+
+  <form id="search-form" role="search">
+    <input
+      type="search"
+      id="search-input"
+      placeholder="キーワードを入力(例: データ同化)"
+      autocomplete="off"
+    />
+  </form>
+
+  <p id="search-status" class="status"></p>
+  <ul id="search-results" class="results"></ul>
+</Layout>
+
+<script>
+  const input = document.getElementById("search-input") as HTMLInputElement;
+  const form = document.getElementById("search-form") as HTMLFormElement;
+  const status = document.getElementById("search-status")!;
+  const results = document.getElementById("search-results")!;
+
+  interface Item {
+    type: string;
+    title: string;
+    url: string;
+    tags: string[];
+    text: string;
+    date: string;
+  }
+
+  let index: Item[] = [];
+
+  const escapeHtml = (s: string) =>
+    s.replace(
+      /[&<>"']/g,
+      (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+          c
+        ]!,
+    );
+
+  function snippet(text: string, q: string): string {
+    const i = text.toLowerCase().indexOf(q.toLowerCase());
+    if (i < 0) return escapeHtml(text.slice(0, 90)) + (text.length > 90 ? "…" : "");
+    const start = Math.max(0, i - 35);
+    const end = Math.min(text.length, i + q.length + 55);
+    const before = escapeHtml(text.slice(start, i));
+    const hit = escapeHtml(text.slice(i, i + q.length));
+    const after = escapeHtml(text.slice(i + q.length, end));
+    return `${start > 0 ? "…" : ""}${before}<mark>${hit}</mark>${after}${end < text.length ? "…" : ""}`;
+  }
+
+  function search(q: string) {
+    q = q.trim();
+    results.innerHTML = "";
+    if (!q) {
+      status.textContent = "";
+      return;
+    }
+    const lq = q.toLowerCase();
+    const hits = index.filter(
+      (item) =>
+        item.title.toLowerCase().includes(lq) ||
+        item.text.toLowerCase().includes(lq) ||
+        item.tags.some((t) => t.toLowerCase().includes(lq)),
+    );
+    status.textContent = hits.length
+      ? `「${q}」の検索結果: ${hits.length}件`
+      : `「${q}」に一致するページ・記事は見つかりませんでした。`;
+
+    for (const item of hits) {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <p class="meta">
+          <span class="type">${escapeHtml(item.type)}</span>
+          ${item.date ? `<time>${escapeHtml(item.date)}</time>` : ""}
+        </p>
+        <a class="title" href="${item.url}">${escapeHtml(item.title)}</a>
+        <p class="snippet">${snippet(item.text, q)}</p>
+        ${
+          item.tags.length
+            ? `<p class="tags">${item.tags
+                .map(
+                  (t) =>
+                    `<a class="tag" href="/search/?q=${encodeURIComponent(t)}">${escapeHtml(t)}</a>`,
+                )
+                .join(" ")}</p>`
+            : ""
+        }
+      `;
+      results.appendChild(li);
+    }
+  }
+
+  async function init() {
+    status.textContent = "検索インデックスを読み込み中…";
+    const res = await fetch("/search-index.json");
+    index = await res.json();
+    status.textContent = "";
+
+    const q = new URLSearchParams(location.search).get("q") ?? "";
+    if (q) {
+      input.value = q;
+      search(q);
+    }
+    input.focus();
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = input.value;
+    history.replaceState(null, "", q ? `?q=${encodeURIComponent(q)}` : location.pathname);
+    search(q);
+  });
+
+  let timer: number | undefined;
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => search(input.value), 200);
+  });
+
+  init();
+</script>
+
+<style>
+  #search-input {
+    font: inherit;
+    width: 100%;
+    max-width: 32em;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: rgba(255, 255, 255, 0.9);
+    outline: none;
+  }
+
+  #search-input:focus {
+    border-color: var(--accent);
+  }
+
+  .status {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 1.25rem;
+  }
+
+  .results {
+    list-style: none;
+    padding: 0;
+    margin-top: 0.5rem;
+  }
+
+  .results :global(li) {
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .results :global(.meta) {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0 0 0.15rem;
+  }
+
+  .results :global(.type) {
+    letter-spacing: 0.15em;
+    color: var(--accent);
+  }
+
+  .results :global(.title) {
+    font-weight: 600;
+    font-size: 1.02rem;
+  }
+
+  .results :global(.snippet) {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0.25rem 0 0;
+  }
+
+  .results :global(mark) {
+    background: rgba(30, 90, 168, 0.18);
+    color: inherit;
+    padding: 0 0.1em;
+  }
+
+  .results :global(.tags) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.5rem 0 0;
+  }
+</style>

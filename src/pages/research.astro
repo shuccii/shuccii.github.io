@@ -1,0 +1,70 @@
+---
+import Layout from "../layouts/Layout.astro";
+import site from "../data/site.json";
+---
+
+<Layout
+  title="研究 | Shuichi Tani"
+  description="機械学習を用いた核融合炉材料の物性予測に関する研究紹介"
+>
+  <h1><span class="en">Research</span>研究内容</h1>
+
+  <p class="lead" data-edit="research.lead">{site.research.lead}</p>
+
+  <h2><span class="en">Background</span>背景</h2>
+  <p data-edit="research.bg1">{site.research.bg1}</p>
+  <p data-edit="research.bg2">{site.research.bg2}</p>
+
+  <h2><span class="en">Topics</span>取り組んでいる課題</h2>
+  <ul>
+    <li data-edit="research.task1">{site.research.task1}</li>
+    <li data-edit="research.task2">{site.research.task2}</li>
+    <li data-edit="research.task3">{site.research.task3}</li>
+  </ul>
+
+  <h2><span class="en">Keywords</span>キーワード</h2>
+  <p class="hint">キーワードをクリックすると、サイト内の関連ページ・記事を検索できます。</p>
+  <ul class="keywords">
+    {
+      site.research.keywords.map((k) => (
+        <li>
+          <a class="tag" href={`/search/?q=${encodeURIComponent(k)}`}>
+            {k}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <h2><span class="en">Links</span>関連リンク</h2>
+  <ul>
+    <li>
+      <a
+        href="https://github.com/shuccii"
+        target="_blank"
+        rel="noopener noreferrer">GitHub: shuccii ↗</a
+      > — 機械学習・データ解析の学習リポジトリなど
+    </li>
+  </ul>
+</Layout>
+
+<style>
+  .lead {
+    font-size: 1.05rem;
+    max-width: 38em;
+  }
+
+  .hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.8rem;
+  }
+
+  .keywords {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+</style>

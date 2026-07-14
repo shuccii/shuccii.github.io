@@ -1,0 +1,88 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+
+const fmt = (d: Date) =>
+  `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+---
+
+<Layout title="ブログ | Shuichi Tani">
+  <h1><span class="en">Blog</span>ブログ</h1>
+  {
+    posts.length > 0 ? (
+      <ul class="posts">
+        {posts.map((post) => (
+          <li>
+            <time>{fmt(post.data.date)}</time>
+            <div>
+              <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+              {post.data.description && (
+                <p class="desc">{post.data.description}</p>
+              )}
+              {post.data.tags.length > 0 && (
+                <p class="tags">
+                  {post.data.tags.map((tag) => (
+                    <a class="tag" href={`/search/?q=${encodeURIComponent(tag)}`}>
+                      {tag}
+                    </a>
+                  ))}
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p>まだ記事がありません。</p>
+    )
+  }
+</Layout>
+
+<style>
+  .posts {
+    list-style: none;
+    padding: 0;
+  }
+
+  .posts li {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .posts time {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    line-height: 1.8;
+  }
+
+  .posts a {
+    font-weight: 600;
+  }
+
+  .desc {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    margin: 0.2rem 0 0;
+  }
+
+  .tags {
+    margin: 0.4rem 0 0;
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 480px) {
+    .posts li {
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+  }
+</style>
