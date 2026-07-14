@@ -283,7 +283,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       const editables = () =>
         Array.from(document.querySelectorAll("[data-edit]"));
 
-      if (document.querySelector("[data-edit]")) {
+      const contentAuthoringPage = ["/blog/", "/photos/", "/videos/"].includes(location.pathname);
+
+      if (document.querySelector("[data-edit]") || contentAuthoringPage) {
         const bar = document.createElement("div");
         bar.id = "edit-bar";
         bar.innerHTML = `
@@ -291,6 +293,38 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           <button id="edit-cancel" type="button" hidden>キャンセル</button>
         `;
         document.body.appendChild(bar);
+
+        if (contentAuthoringPage) {
+          const panel = document.createElement("section");
+          panel.id = "content-editor";
+          panel.innerHTML = location.pathname === "/blog/"
+            ? `
+              <h2>新しいブログ記事</h2>
+              <p class="content-editor-note">本文はMarkdownで書けます。画像・動画を選ぶと、記事と一緒にアップロードされます。</p>
+              <form id="blog-publish-form">
+                <label>タイトル<input name="title" required maxlength="120" /></label>
+                <label>公開日<input name="date" type="date" required /></label>
+                <label>説明（一覧用）<input name="description" maxlength="200" /></label>
+                <label>タグ（カンマ区切り）<input name="tags" placeholder="日記, 研究" /></label>
+                <label>本文<textarea name="body" required rows="14" placeholder="# 見出し\n\n本文をMarkdownで書けます。"></textarea></label>
+                <label>画像・動画を添付<input name="media" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple /></label>
+                <button type="submit">記事を公開</button>
+              </form>
+            `
+            : `
+              <h2>${location.pathname === "/photos/" ? "写真を追加" : "動画を追加"}</h2>
+              <p class="content-editor-note">1ファイル50MBまで。保存後、GitHub Pagesの再ビルドが終わると公開されます。</p>
+              <form id="media-upload-form" data-kind="${location.pathname === "/photos/" ? "photo" : "video"}">
+                <label>ファイルを選択<input name="media" type="file" accept="${location.pathname === "/photos/" ? "image/jpeg,image/png,image/webp,image/gif" : "video/mp4,video/webm,video/quicktime"}" ${location.pathname === "/photos/" ? "multiple" : ""} required /></label>
+                <button type="submit">アップロード</button>
+              </form>
+            `;
+          document.body.appendChild(panel);
+          const dateInput = panel.querySelector('input[name="date"]');
+          if (dateInput) {
+            dateInput.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+          }
+        }
 
         const toggleBtn = bar.querySelector("#edit-toggle");
         const cancelBtn = bar.querySelector("#edit-cancel");
@@ -325,12 +359,66 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         });
 
         const encodeBase64 = (value) => {
-          const bytes = new TextEncoder().encode(value);
+          return encodeBytesBase64(new TextEncoder().encode(value));
+        };
+
+        const encodeBytesBase64 = (bytes) => {
           let binary = "";
           for (let i = 0; i < bytes.length; i += 0x8000) {
             binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
           }
           return btoa(binary);
+        };
+
+        const githubUrl = (path) => `${githubApi}${path.split("/").map(encodeURIComponent).join("/")}`;
+
+        const getGithubToken = () => {
+          let token = sessionStorage.getItem(tokenKey);
+          if (!token) {
+            token = prompt("GitHub fine-grained PATを入力してください\n(repoのContents: Read and write権限が必要です)");
+            if (token) sessionStorage.setItem(tokenKey, token);
+          }
+          return token;
+        };
+
+        const putGithubFile = async (path, content, token, message) => {
+          const url = githubUrl(path);
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const existing = await fetch(`${url}?ref=main&cacheBust=${Date.now()}`, {
+              headers: authHeaders(token), cache: "no-store",
+            });
+            let sha;
+            if (existing.ok) sha = (await existing.json()).sha;
+            else if (existing.status !== 404) throw new Error(`保存先を確認できませんでした (${existing.status})`);
+
+            const result = await fetch(url, {
+              method: "PUT",
+              headers: { ...authHeaders(token), "Content-Type": "application/json" },
+              body: JSON.stringify({ message, content, ...(sha ? { sha } : {}), branch: "main" }),
+            });
+            if (result.ok) return;
+            if (result.status !== 409 || attempt === 1) {
+              throw new Error(`GitHubへの保存に失敗しました (${result.status})`);
+            }
+          }
+        };
+
+        const mediaType = (file) => {
+          const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+          if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) return "photo";
+          if (["mp4", "webm", "mov"].includes(ext)) return "video";
+          return null;
+        };
+
+        const uploadMedia = async (file, token) => {
+          const kind = mediaType(file);
+          if (!kind) throw new Error(`${file.name} は対応していない形式です`);
+          if (file.size > 50 * 1024 * 1024) throw new Error(`${file.name} は50MBを超えています`);
+          const safeName = file.name.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-");
+          const name = `${Date.now()}-${safeName}`;
+          const directory = kind === "photo" ? "src/assets/photos" : "src/assets/videos";
+          await putGithubFile(`${directory}/${name}`, encodeBytesBase64(new Uint8Array(await file.arrayBuffer())), token, `content: upload ${kind}`);
+          return { kind, name };
         };
 
         const saveToGithub = async (changes, token) => {
@@ -431,6 +519,77 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         cancelBtn.addEventListener("click", () => {
           for (const el of editables()) el.textContent = original.get(el) ?? el.textContent;
           setEditing(false);
+        });
+
+        const setFormBusy = (form, busy, label) => {
+          const button = form.querySelector('button[type="submit"]');
+          button.disabled = busy;
+          button.textContent = label;
+        };
+
+        const showPublished = (form, message) => {
+          const notice = document.createElement("p");
+          notice.className = "content-editor-success";
+          notice.textContent = message;
+          form.appendChild(notice);
+        };
+
+        const mediaForm = document.querySelector("#media-upload-form");
+        mediaForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const input = form.querySelector('input[name="media"]');
+          const files = Array.from(input.files ?? []);
+          if (files.length === 0) return;
+          const kind = form.dataset.kind;
+          if (files.some((file) => mediaType(file) !== kind)) {
+            alert(kind === "photo" ? "画像ファイルを選択してください。" : "対応する動画ファイルを選択してください。");
+            return;
+          }
+          const token = getGithubToken();
+          if (!token) return;
+          setFormBusy(form, true, "アップロード中…");
+          try {
+            for (const file of files) await uploadMedia(file, token);
+            form.reset();
+            showPublished(form, "✓ GitHubに保存しました。公開反映まで少し待ってください。");
+          } catch (error) {
+            alert(error instanceof Error ? error.message : "アップロードに失敗しました");
+          } finally {
+            setFormBusy(form, false, "アップロード");
+          }
+        });
+
+        const blogForm = document.querySelector("#blog-publish-form");
+        blogForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const fields = new FormData(form);
+          const title = String(fields.get("title") ?? "").trim();
+          const date = String(fields.get("date") ?? "");
+          const description = String(fields.get("description") ?? "").trim();
+          const body = String(fields.get("body") ?? "").trim();
+          const tags = String(fields.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
+          const files = Array.from(form.querySelector('input[name="media"]').files ?? []);
+          if (!title || !date || !body) return;
+          const token = getGithubToken();
+          if (!token) return;
+          setFormBusy(form, true, "公開中…");
+          try {
+            const uploaded = [];
+            for (const file of files) uploaded.push(await uploadMedia(file, token));
+            const slugBase = title.normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "") || "post";
+            const slug = `${date}-${slugBase}-${Date.now().toString().slice(-6)}`;
+            const markdown = `---\ntitle: ${JSON.stringify(title)}\ndate: ${date}\ndescription: ${JSON.stringify(description)}\ntags: ${JSON.stringify(tags)}\nphotos: ${JSON.stringify(uploaded.filter((file) => file.kind === "photo").map((file) => file.name))}\nvideos: ${JSON.stringify(uploaded.filter((file) => file.kind === "video").map((file) => file.name))}\n---\n\n${body}\n`;
+            await putGithubFile(`src/content/blog/${slug}.md`, encodeBase64(markdown), token, "content: publish blog post");
+            form.reset();
+            form.querySelector('input[name="date"]').value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+            showPublished(form, "✓ 記事をGitHubに保存しました。公開反映まで少し待ってください。");
+          } catch (error) {
+            alert(error instanceof Error ? error.message : "記事の公開に失敗しました");
+          } finally {
+            setFormBusy(form, false, "記事を公開");
+          }
         });
       }
     </script>
@@ -836,6 +995,92 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   #edit-bar button:hover {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  #content-editor {
+    display: none;
+    position: fixed;
+    right: 1.25rem;
+    bottom: 4.8rem;
+    z-index: 100;
+    width: min(440px, calc(100vw - 2.5rem));
+    max-height: min(78vh, 720px);
+    overflow: auto;
+    padding: 1.1rem;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+    text-align: left;
+  }
+
+  body.editing #content-editor {
+    display: block;
+  }
+
+  #content-editor h2 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .content-editor-note {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    line-height: 1.6;
+    margin-bottom: 0.75rem !important;
+  }
+
+  #content-editor form {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  #content-editor label {
+    display: grid;
+    gap: 0.2rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  #content-editor input,
+  #content-editor textarea {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 0.88rem;
+  }
+
+  #content-editor textarea {
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  #content-editor button {
+    justify-self: start;
+    border: 0;
+    border-radius: 4px;
+    padding: 0.5rem 0.85rem;
+    color: #fff;
+    background: var(--accent);
+    font: inherit;
+    font-size: 0.84rem;
+    cursor: pointer;
+  }
+
+  #content-editor button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .content-editor-success {
+    margin: 0.1rem 0 0 !important;
+    color: #1b6e3b;
+    font-size: 0.8rem;
+    line-height: 1.6;
   }
 
   body.editing [data-edit] {
