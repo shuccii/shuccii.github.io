@@ -168,13 +168,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           const distance = dark
             ? (138 - brightness) / 138
             : (brightness - 138) / (255 - 138);
-          const strength = dark ? 0.28 + distance * 0.28 : 0.18 + distance * 0.3;
+          const strength = dark ? 0.12 + distance * 0.16 : 0.18 + distance * 0.3;
           document.body.classList.toggle("background-dark", dark);
           document.body.classList.toggle("background-light", !dark);
-          document.documentElement.style.setProperty(
-            "--bg-veil-color",
-            dark ? "8 15 26" : "253 253 252",
-          );
+          document.documentElement.style.setProperty("--bg-veil-color", "253 253 252");
           document.documentElement.style.setProperty("--bg-veil-strength", String(strength));
         };
 
@@ -649,11 +646,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   body.background-dark {
     --text: #f7f9fd;
     --text-muted: rgba(239, 244, 252, 0.8);
-    --bg: #111a29;
-    --border: rgba(234, 242, 255, 0.32);
+    --border: rgba(255, 255, 255, 0.45);
     --accent: #9acbff;
     --accent-weak: rgba(154, 203, 255, 0.18);
-    --panel: rgba(12, 20, 33, 0.58);
+    --panel: rgba(255, 255, 255, 0.7);
   }
 
   * {
@@ -875,7 +871,19 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   body.background-dark .site-header,
   body.background-dark .site-footer {
-    background: rgba(10, 17, 29, 0.58);
+    color: #222222;
+    background: rgba(253, 253, 252, 0.78);
+  }
+
+  body.background-dark .site-header a,
+  body.background-dark .site-footer a {
+    color: #3c4653;
+  }
+
+  body.background-dark .site-header a:hover,
+  body.background-dark .site-header a.active,
+  body.background-dark .site-footer a:hover {
+    color: #1e5aa8;
   }
 
   .header-inner {
