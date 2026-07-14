@@ -163,6 +163,41 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         let showing = 0;
         let lastIndex = -1;
 
+        const applyBackgroundTone = (brightness) => {
+          const dark = brightness < 138;
+          const distance = dark
+            ? (138 - brightness) / 138
+            : (brightness - 138) / (255 - 138);
+          const strength = dark ? 0.28 + distance * 0.28 : 0.18 + distance * 0.3;
+          document.body.classList.toggle("background-dark", dark);
+          document.body.classList.toggle("background-light", !dark);
+          document.documentElement.style.setProperty(
+            "--bg-veil-color",
+            dark ? "8 15 26" : "253 253 252",
+          );
+          document.documentElement.style.setProperty("--bg-veil-strength", String(strength));
+        };
+
+        const brightnessFromElement = (element) => {
+          try {
+            const canvas = document.createElement("canvas");
+            const side = 32;
+            canvas.width = side;
+            canvas.height = side;
+            const context = canvas.getContext("2d", { willReadFrequently: true });
+            if (!context) return 150;
+            context.drawImage(element, 0, 0, side, side);
+            const pixels = context.getImageData(0, 0, side, side).data;
+            let total = 0;
+            for (let i = 0; i < pixels.length; i += 4) {
+              total += pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722;
+            }
+            return total / (pixels.length / 4);
+          } catch {
+            return 150;
+          }
+        };
+
         const pick = () => {
           if (bgMedia.length === 1) return 0;
           let i;
@@ -179,6 +214,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             const img = new Image();
             img.onload = () => {
               layer.style.backgroundImage = `url("${media.url}")`;
+              applyBackgroundTone(brightnessFromElement(img));
               onReady();
             };
             img.src = media.url;
@@ -193,6 +229,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               "canplay",
               () => {
                 v.play().catch(() => {});
+                applyBackgroundTone(brightnessFromElement(v));
                 onReady();
               },
               { once: true },
@@ -605,6 +642,18 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --accent: #1e5aa8;
     --accent-weak: rgba(30, 90, 168, 0.08);
     --panel: rgba(255, 255, 255, 0.72);
+    --bg-veil-color: 253 253 252;
+    --bg-veil-strength: 0.38;
+  }
+
+  body.background-dark {
+    --text: #f7f9fd;
+    --text-muted: rgba(239, 244, 252, 0.8);
+    --bg: #111a29;
+    --border: rgba(234, 242, 255, 0.32);
+    --accent: #9acbff;
+    --accent-weak: rgba(154, 203, 255, 0.18);
+    --panel: rgba(12, 20, 33, 0.58);
   }
 
   * {
@@ -670,9 +719,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     inset: 0;
     background: linear-gradient(
       to bottom,
-      rgba(253, 253, 252, 0.18),
-      rgba(253, 253, 252, 0.36) 42%,
-      rgba(253, 253, 252, 0.48)
+      rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 0.7)),
+      rgb(var(--bg-veil-color) / var(--bg-veil-strength)) 42%,
+      rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 1.18))
     );
     z-index: -1;
   }
@@ -822,6 +871,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     position: sticky;
     top: 0;
     z-index: 10;
+  }
+
+  body.background-dark .site-header,
+  body.background-dark .site-footer {
+    background: rgba(10, 17, 29, 0.58);
   }
 
   .header-inner {
