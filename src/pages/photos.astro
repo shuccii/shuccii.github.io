@@ -11,7 +11,7 @@ const postMap = await getMediaPostMap();
   <h1><span class="en">Photo</span>写真</h1>
   <p class="hint">
     ここに追加した写真は、サイト全体の背景としてもランダムに表示されます。
-    ブログ記事に使われている写真は、クリックすると記事へ移動します。
+    写真をクリックすると、縦横比を保ったまま拡大表示されます。
   </p>
   {
     photos.length > 0 ? (
@@ -145,11 +145,13 @@ const postMap = await getMediaPostMap();
   }
 
   #photo-lightbox {
-    max-width: min(96vw, 1200px);
-    max-height: 94vh;
+    width: fit-content;
+    max-width: 90vw;
+    max-height: 84vh;
     padding: 0;
     border: 0;
     background: transparent;
+    overflow: visible;
   }
 
   #photo-lightbox::backdrop {
@@ -158,8 +160,10 @@ const postMap = await getMediaPostMap();
 
   #photo-lightbox-image {
     display: block;
-    max-width: 96vw;
-    max-height: 90vh;
+    width: auto;
+    height: auto;
+    max-width: min(90vw, 960px);
+    max-height: 84vh;
     object-fit: contain;
     border-radius: 4px;
   }

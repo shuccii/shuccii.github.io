@@ -67,7 +67,8 @@ const youtubeVideos: { id: string; title: string }[] = [];
 <style>
   .video-list {
     display: grid;
-    gap: 2.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
   }
 
   figure {
@@ -76,6 +77,8 @@ const youtubeVideos: { id: string; title: string }[] = [];
 
   video {
     width: 100%;
+    height: 180px;
+    object-fit: cover;
     border-radius: 4px;
     border: 1px solid var(--border);
     background: #000;
@@ -83,7 +86,7 @@ const youtubeVideos: { id: string; title: string }[] = [];
 
   .yt-wrap {
     position: relative;
-    aspect-ratio: 16 / 9;
+    height: 180px;
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -98,7 +101,7 @@ const youtubeVideos: { id: string; title: string }[] = [];
   }
 
   figcaption {
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
     margin-top: 0.4rem;
   }
