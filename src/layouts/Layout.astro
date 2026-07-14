@@ -639,6 +639,15 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --accent: #1e5aa8;
     --accent-weak: rgba(30, 90, 168, 0.08);
     --panel: rgba(255, 255, 255, 0.72);
+    --surface: rgba(253, 253, 252, 0.88);
+    --surface-text: #29323b;
+    --surface-muted: #66717c;
+    --tag-text: #1e5aa8;
+    --tag-bg: rgba(30, 90, 168, 0.08);
+    --tag-border: rgba(30, 90, 168, 0.18);
+    --floating-bg: rgba(253, 253, 252, 0.94);
+    --floating-text: #29323b;
+    --floating-border: rgba(207, 213, 219, 0.9);
     --bg-veil-color: 253 253 252;
     --bg-veil-strength: 0.38;
   }
@@ -647,9 +656,15 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --text: #f7f9fd;
     --text-muted: rgba(239, 244, 252, 0.8);
     --border: rgba(255, 255, 255, 0.45);
-    --accent: #9acbff;
-    --accent-weak: rgba(154, 203, 255, 0.18);
-    --panel: rgba(255, 255, 255, 0.7);
+    --accent: #e3f3ff;
+    --accent-weak: rgba(225, 242, 255, 0.18);
+    --panel: rgba(253, 253, 252, 0.72);
+    --tag-text: #f5fbff;
+    --tag-bg: rgba(7, 27, 52, 0.48);
+    --tag-border: rgba(226, 244, 255, 0.64);
+    --floating-bg: rgba(11, 23, 39, 0.86);
+    --floating-text: #f7f9fd;
+    --floating-border: rgba(226, 243, 255, 0.55);
   }
 
   * {
@@ -846,6 +861,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   pre {
     background: var(--panel);
+    color: var(--surface-text);
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 1rem 1.25rem;
@@ -979,7 +995,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     max-width: 480px;
     margin: 0 auto 1.25rem;
     padding: 1rem 1.25rem;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--surface);
+    color: var(--surface-text);
     border: 1px solid var(--border);
     border-radius: 6px;
   }
@@ -990,7 +1007,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   .sns-editor-title {
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--surface-muted);
     margin-bottom: 0.5rem !important;
   }
 
@@ -1003,7 +1020,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   #sns-editor dt {
     font-size: 0.82rem;
-    color: var(--text-muted);
+    color: var(--surface-muted);
   }
 
   #sns-editor dd {
@@ -1017,9 +1034,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   .tag {
     display: inline-block;
     font-size: 0.8rem;
-    color: var(--accent);
-    background: var(--accent-weak);
-    border: 1px solid rgba(30, 90, 168, 0.18);
+    color: var(--tag-text);
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
     padding: 0.1rem 0.65rem;
     border-radius: 2rem;
     line-height: 1.7;
@@ -1027,7 +1044,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   a.tag:hover {
     background: var(--accent);
-    color: #fff;
+    color: #173a5f;
     text-decoration: none;
   }
 
@@ -1047,9 +1064,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     letter-spacing: 0.05em;
     padding: 0.45rem 1.1rem;
     border-radius: 2rem;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--text);
+    border: 1px solid var(--floating-border);
+    background: var(--floating-bg);
+    color: var(--floating-text);
     cursor: pointer;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   }
@@ -1069,7 +1086,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     max-height: min(78vh, 720px);
     overflow: auto;
     padding: 1.1rem;
-    background: rgba(255, 255, 255, 0.97);
+    background: var(--surface);
+    color: var(--surface-text);
     border: 1px solid var(--border);
     border-radius: 8px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
@@ -1086,7 +1104,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   .content-editor-note {
-    color: var(--text-muted);
+    color: var(--surface-muted);
     font-size: 0.76rem;
     line-height: 1.6;
     margin-bottom: 0.75rem !important;
@@ -1100,7 +1118,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   #content-editor label {
     display: grid;
     gap: 0.2rem;
-    color: var(--text-muted);
+    color: var(--surface-muted);
     font-size: 0.78rem;
   }
 
@@ -1108,7 +1126,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   #content-editor textarea {
     width: 100%;
     padding: 0.5rem 0.6rem;
-    color: var(--text);
+    color: var(--surface-text);
     background: #fff;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -1126,7 +1144,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     border: 0;
     border-radius: 4px;
     padding: 0.5rem 0.85rem;
-    color: #fff;
+    color: #173a5f;
     background: var(--accent);
     font: inherit;
     font-size: 0.84rem;
