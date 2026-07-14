@@ -1,43 +1,38 @@
-# Astro Starter Kit: Minimal
+# 余白の庭
+
+Astroで作った個人サイトです。GitHub Pagesで公開しています。
+
+## 開発
 
 ```sh
-npm create astro@latest -- --template minimal
+npm install
+npm run dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+開発サーバーでは、画面右下の「✎ 編集」から編集できます。保存時はローカルの
+`src/data/site.json` に書き戻します。編集パスワードは、プロジェクト直下の
+`.edit-secret` に設定してください。このファイルはGit管理対象外です。
 
-## 🚀 Project Structure
+## 公開サイトでの編集
 
-Inside of your Astro project, you'll see the following folders and files:
+GitHub Pagesは静的サイトのため、編集内容の保存先としてGitHub Contents APIを使います。
+画面右下の「✎ 編集」を押すと、GitHubのfine-grained Personal Access Token (PAT)を求められます。
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+PATは次の条件で作成してください。
+
+- Repository access: `Only select repositories` → `shuccii/shuccii.github.io`
+- Repository permissions: `Contents` → `Read and write`
+- 有効期限は必要な期間だけにする
+
+入力したPATはブラウザのセッション中だけ保持し、サイト側へ送信せずGitHub APIへ直接送ります。
+保存すると `src/data/site.json` の更新コミットが作成され、GitHub Actionsの再ビルド後に公開サイトへ反映されます。
+
+現在、Web編集の対象はページ内に表示される `site.json` のテキスト項目です。ブログ記事のMarkdown編集には対応していません。
+
+## ビルド
+
+```sh
+npm run build
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+`main` ブランチへpushすると、`.github/workflows/deploy.yml` がGitHub Pagesへデプロイします。
