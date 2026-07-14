@@ -333,9 +333,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           panel.id = "content-editor";
           panel.innerHTML = location.pathname === "/blog/"
             ? `
-              <h2>新しいブログ記事</h2>
+              <h2 id="blog-editor-heading">新しいブログ記事</h2>
               <p class="content-editor-note">本文はMarkdownで書けます。画像・動画を選ぶと、記事と一緒にアップロードされます。</p>
               <form id="blog-publish-form">
+                <p id="blog-editing-note" class="content-editor-note" hidden></p>
                 <label>タイトル<input name="title" required maxlength="120" /></label>
                 <label>公開日<input name="date" type="date" required /></label>
                 <label>説明（一覧用）<input name="description" maxlength="200" /></label>
@@ -343,6 +344,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
                 <label>本文<textarea name="body" required rows="14" placeholder="# 見出し\n\n本文をMarkdownで書けます。"></textarea></label>
                 <label>画像・動画を添付<input name="media" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple /></label>
                 <button type="submit">記事を公開</button>
+                <button id="blog-edit-cancel" type="button" hidden>新規投稿に戻る</button>
               </form>
             `
             : `
@@ -433,6 +435,37 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             if (result.ok) return;
             if (result.status !== 409 || attempt === 1) {
               throw new Error(`GitHubへの保存に失敗しました (${result.status})`);
+            }
+          }
+        };
+
+        const getGithubTextFile = async (path, token) => {
+          const response = await fetch(`${githubUrl(path)}?ref=main&cacheBust=${Date.now()}`, {
+            headers: authHeaders(token), cache: "no-store",
+          });
+          if (!response.ok) throw new Error(`GitHubからファイルを取得できませんでした (${response.status})`);
+          const file = await response.json();
+          return new TextDecoder().decode(
+            Uint8Array.from(atob(file.content.replace(/\n/g, "")), (char) => char.charCodeAt(0)),
+          );
+        };
+
+        const deleteGithubFile = async (path, token, message) => {
+          const url = githubUrl(path);
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const existing = await fetch(`${url}?ref=main&cacheBust=${Date.now()}`, {
+              headers: authHeaders(token), cache: "no-store",
+            });
+            if (!existing.ok) throw new Error(`削除対象を確認できませんでした (${existing.status})`);
+            const file = await existing.json();
+            const result = await fetch(url, {
+              method: "DELETE",
+              headers: { ...authHeaders(token), "Content-Type": "application/json" },
+              body: JSON.stringify({ message, sha: file.sha, branch: "main" }),
+            });
+            if (result.ok) return;
+            if (result.status !== 409 || attempt === 1) {
+              throw new Error(`GitHubから削除できませんでした (${result.status})`);
             }
           }
         };
@@ -594,7 +627,93 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           }
         });
 
+        const parseFrontmatter = (markdown) => {
+          const matched = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+          const frontmatter = matched?.[1] ?? "";
+          const value = (key) => frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim() ?? "";
+          const array = (key) => {
+            const raw = value(key);
+            try { return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []; } catch {
+              return raw.replace(/^\[|\]$/g, "").split(",").map((item) => item.trim()).filter(Boolean);
+            }
+          };
+          const text = (key) => {
+            const raw = value(key);
+            try { return String(JSON.parse(raw)); } catch { return raw.replace(/^['"]|['"]$/g, ""); }
+          };
+          return {
+            title: text("title"), date: value("date"), description: text("description"), tags: array("tags"),
+            photos: array("photos"), videos: array("videos"), body: matched?.[2]?.trim() ?? "",
+          };
+        };
+
+        let editingPost = null;
         const blogForm = document.querySelector("#blog-publish-form");
+        const blogHeading = document.querySelector("#blog-editor-heading");
+        const blogNote = document.querySelector("#blog-editing-note");
+        const blogCancel = document.querySelector("#blog-edit-cancel");
+
+        const resetBlogForm = () => {
+          editingPost = null;
+          blogForm?.reset();
+          const date = blogForm?.querySelector('input[name="date"]');
+          if (date) date.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+          if (blogHeading) blogHeading.textContent = "新しいブログ記事";
+          if (blogNote) blogNote.hidden = true;
+          if (blogCancel) blogCancel.hidden = true;
+          const submit = blogForm?.querySelector('button[type="submit"]');
+          if (submit) submit.textContent = "記事を公開";
+        };
+
+        blogCancel?.addEventListener("click", resetBlogForm);
+
+        document.querySelectorAll(".blog-edit").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const token = getGithubToken();
+            const path = button.dataset.blogPath;
+            if (!token || !path) return;
+            try {
+              const post = parseFrontmatter(await getGithubTextFile(path, token));
+              editingPost = { path, photos: post.photos, videos: post.videos };
+              blogForm.querySelector('input[name="title"]').value = post.title;
+              blogForm.querySelector('input[name="date"]').value = post.date;
+              blogForm.querySelector('input[name="description"]').value = post.description;
+              blogForm.querySelector('input[name="tags"]').value = post.tags.join(", ");
+              blogForm.querySelector('textarea[name="body"]').value = post.body;
+              blogHeading.textContent = "ブログ記事を編集";
+              blogNote.textContent = `添付済み: ${[...post.photos, ...post.videos].join(", ") || "なし"}`;
+              blogNote.hidden = false;
+              blogCancel.hidden = false;
+              blogForm.querySelector('button[type="submit"]').textContent = "変更を保存";
+              document.getElementById("content-editor")?.scrollTo({ top: 0, behavior: "smooth" });
+            } catch (error) {
+              alert(error instanceof Error ? error.message : "記事を読み込めませんでした");
+            }
+          });
+        });
+
+        document.querySelectorAll(".blog-delete, .media-delete").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const path = button.dataset.blogPath ?? button.dataset.mediaPath;
+            const isMedia = Boolean(button.dataset.mediaPath);
+            const message = isMedia
+              ? "このファイルを削除しますか？ブログ記事からの参照も表示されなくなります。"
+              : "この記事を削除しますか？添付済みの写真・動画は削除されません。";
+            if (!path || !confirm(message)) return;
+            const token = getGithubToken();
+            if (!token) return;
+            button.disabled = true;
+            try {
+              await deleteGithubFile(path, token, isMedia ? "content: delete media" : "content: delete blog post");
+              button.textContent = "削除しました";
+              setTimeout(() => location.reload(), 3500);
+            } catch (error) {
+              button.disabled = false;
+              alert(error instanceof Error ? error.message : "削除に失敗しました");
+            }
+          });
+        });
+
         blogForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.currentTarget;
@@ -608,21 +727,23 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           if (!title || !date || !body) return;
           const token = getGithubToken();
           if (!token) return;
-          setFormBusy(form, true, "公開中…");
+          setFormBusy(form, true, editingPost ? "保存中…" : "公開中…");
           try {
             const uploaded = [];
             for (const file of files) uploaded.push(await uploadMedia(file, token));
             const slugBase = title.normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "") || "post";
-            const slug = `${date}-${slugBase}-${Date.now().toString().slice(-6)}`;
-            const markdown = `---\ntitle: ${JSON.stringify(title)}\ndate: ${date}\ndescription: ${JSON.stringify(description)}\ntags: ${JSON.stringify(tags)}\nphotos: ${JSON.stringify(uploaded.filter((file) => file.kind === "photo").map((file) => file.name))}\nvideos: ${JSON.stringify(uploaded.filter((file) => file.kind === "video").map((file) => file.name))}\n---\n\n${body}\n`;
-            await putGithubFile(`src/content/blog/${slug}.md`, encodeBase64(markdown), token, "content: publish blog post");
-            form.reset();
-            form.querySelector('input[name="date"]').value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
-            showPublished(form, "✓ 記事をGitHubに保存しました。公開反映まで少し待ってください。");
+            const path = editingPost?.path ?? `src/content/blog/${date}-${slugBase}-${Date.now().toString().slice(-6)}.md`;
+            const photos = [...(editingPost?.photos ?? []), ...uploaded.filter((file) => file.kind === "photo").map((file) => file.name)];
+            const videos = [...(editingPost?.videos ?? []), ...uploaded.filter((file) => file.kind === "video").map((file) => file.name)];
+            const markdown = `---\ntitle: ${JSON.stringify(title)}\ndate: ${date}\ndescription: ${JSON.stringify(description)}\ntags: ${JSON.stringify(tags)}\nphotos: ${JSON.stringify(photos)}\nvideos: ${JSON.stringify(videos)}\n---\n\n${body}\n`;
+            await putGithubFile(path, encodeBase64(markdown), token, editingPost ? "content: update blog post" : "content: publish blog post");
+            const updated = Boolean(editingPost);
+            resetBlogForm();
+            showPublished(form, updated ? "✓ 変更をGitHubに保存しました。公開反映まで少し待ってください。" : "✓ 記事をGitHubに保存しました。公開反映まで少し待ってください。");
           } catch (error) {
-            alert(error instanceof Error ? error.message : "記事の公開に失敗しました");
+            alert(error instanceof Error ? error.message : "記事の保存に失敗しました");
           } finally {
-            setFormBusy(form, false, "記事を公開");
+            setFormBusy(form, false, editingPost ? "変更を保存" : "記事を公開");
           }
         });
       }

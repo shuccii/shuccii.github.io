@@ -37,6 +37,7 @@ const youtubeVideos: { id: string; title: string }[] = [];
               <video src={video.url} controls preload="metadata" />
               <figcaption>
                 {video.name}
+                <button type="button" class="media-delete" data-media-path={`src/assets/videos/${video.file}`}>削除</button>
                 {post && (
                   <a class="post-link" href={`/blog/${post.slug}/`}>
                     📝 {post.title}
@@ -110,6 +111,23 @@ const youtubeVideos: { id: string; title: string }[] = [];
     display: block;
     font-size: 0.82rem;
     margin-top: 0.1rem;
+  }
+
+  .media-delete {
+    display: none;
+    margin-top: 0.35rem;
+    border: 1px solid var(--floating-border);
+    border-radius: 4px;
+    padding: 0.15rem 0.55rem;
+    color: #b42318;
+    background: var(--floating-bg);
+    font: inherit;
+    font-size: 0.74rem;
+    cursor: pointer;
+  }
+
+  :global(body.editing) .media-delete {
+    display: block;
   }
 
   .empty {
