@@ -411,10 +411,13 @@ const tiles = [
     display: flex;
     flex-direction: column;
     padding: 1.1rem 1.2rem;
-    background: rgba(255, 255, 255, 0.86);
-    border: 1px solid var(--border);
+    /* 背景メディアの明度には連動させず、更新欄だけは一定の淡いガラス調にする */
+    background: rgba(242, 244, 243, 0.62);
+    border: 1px solid rgba(218, 222, 220, 0.82);
     border-radius: 8px;
-    color: var(--text);
+    color: #30343a;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     transition:
       transform 0.35s ease,
       box-shadow 0.35s ease,
@@ -424,19 +427,19 @@ const tiles = [
   .update-card:hover {
     text-decoration: none;
     transform: translateY(-4px);
-    border-color: var(--accent);
+    border-color: #1e5aa8;
     box-shadow: 0 10px 24px rgba(20, 30, 45, 0.1);
   }
 
   .update-type {
     font-size: 0.62rem;
     letter-spacing: 0.3em;
-    color: var(--accent);
+    color: #1e5aa8;
   }
 
   .update-date {
     font-size: 0.78rem;
-    color: var(--text-muted);
+    color: #68717a;
     margin-top: 0.2rem;
   }
 
@@ -448,7 +451,7 @@ const tiles = [
 
   .update-desc {
     font-size: 0.82rem;
-    color: var(--text-muted);
+    color: #59616b;
     line-height: 1.7;
     margin-top: 0.3rem;
     display: -webkit-box;
