@@ -210,4 +210,25 @@ const postMap = await getMediaPostMap();
     line-height: 1;
     cursor: pointer;
   }
+
+  @media (max-width: 520px) {
+    .gallery {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    .photo-zoom :global(img) {
+      height: 132px;
+    }
+
+    figcaption {
+      font-size: 0.74rem;
+      overflow-wrap: anywhere;
+    }
+
+    #photo-lightbox-image {
+      max-width: 94vw;
+      max-height: 78vh;
+    }
+  }
 </style>

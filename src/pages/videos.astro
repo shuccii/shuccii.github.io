@@ -141,4 +141,21 @@ const youtubeVideos: { id: string; title: string }[] = [];
   .empty ul {
     margin-bottom: 0;
   }
+
+  @media (max-width: 520px) {
+    .video-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    video,
+    .yt-wrap {
+      height: 132px;
+    }
+
+    figcaption {
+      font-size: 0.74rem;
+      overflow-wrap: anywhere;
+    }
+  }
 </style>

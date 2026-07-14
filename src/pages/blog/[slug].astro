@@ -162,4 +162,31 @@ const postVideos = post.data.videos
     height: auto;
     border-radius: 4px;
   }
+
+  @media (max-width: 520px) {
+    .post-header h1 {
+      font-size: 1.35rem;
+      line-height: 1.55;
+      margin-bottom: 0.35rem;
+    }
+
+    .meta {
+      gap: 0.4rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .media-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .media-grid img {
+      height: 128px;
+    }
+
+    .post-media h2 {
+      margin-top: 2.25rem;
+    }
+  }
 </style>
