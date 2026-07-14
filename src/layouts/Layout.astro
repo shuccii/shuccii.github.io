@@ -335,31 +335,43 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
         const saveToGithub = async (changes, token) => {
           const url = `${githubApi}${githubFile}`;
-          const fileRes = await fetch(`${url}?ref=main`, { headers: authHeaders(token) });
-          if (!fileRes.ok) throw new Error(`GitHubからファイルを取得できませんでした (${fileRes.status})`);
-          const file = await fileRes.json();
-          const data = JSON.parse(new TextDecoder().decode(
-            Uint8Array.from(atob(file.content.replace(/\n/g, "")), (char) => char.charCodeAt(0)),
-          ));
-          for (const [key, value] of Object.entries(changes)) {
-            const parts = key.split(".");
-            let obj = data;
-            for (let i = 0; i < parts.length - 1; i++) obj = obj?.[parts[i]];
-            if (obj && typeof obj[parts[parts.length - 1]] === "string") {
-              obj[parts[parts.length - 1]] = value;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const fileRes = await fetch(`${url}?ref=main&cacheBust=${Date.now()}`, {
+              headers: authHeaders(token),
+              cache: "no-store",
+            });
+            if (!fileRes.ok) {
+              const detail = await fileRes.text();
+              throw new Error(`GitHubからファイルを取得できませんでした (${fileRes.status}) ${detail}`);
+            }
+            const file = await fileRes.json();
+            const data = JSON.parse(new TextDecoder().decode(
+              Uint8Array.from(atob(file.content.replace(/\n/g, "")), (char) => char.charCodeAt(0)),
+            ));
+            for (const [key, value] of Object.entries(changes)) {
+              const parts = key.split(".");
+              let obj = data;
+              for (let i = 0; i < parts.length - 1; i++) obj = obj?.[parts[i]];
+              if (obj && typeof obj[parts[parts.length - 1]] === "string") {
+                obj[parts[parts.length - 1]] = value;
+              }
+            }
+            const updateRes = await fetch(url, {
+              method: "PUT",
+              headers: { ...authHeaders(token), "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: "content: update site text",
+                content: encodeBase64(`${JSON.stringify(data, null, 2)}\n`),
+                sha: file.sha,
+                branch: "main",
+              }),
+            });
+            if (updateRes.ok) return;
+            if (updateRes.status !== 409 || attempt === 1) {
+              const detail = await updateRes.text();
+              throw new Error(`GitHubへの保存に失敗しました (${updateRes.status}) ${detail}`);
             }
           }
-          const updateRes = await fetch(url, {
-            method: "PUT",
-            headers: { ...authHeaders(token), "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: "content: update site text",
-              content: encodeBase64(`${JSON.stringify(data, null, 2)}\n`),
-              sha: file.sha,
-              branch: "main",
-            }),
-          });
-          if (!updateRes.ok) throw new Error(`GitHubへの保存に失敗しました (${updateRes.status})`);
         };
 
         const setEditing = (on) => {
@@ -403,8 +415,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               await saveToGithub(changes, token);
             }
             setEditing(false);
-            toggleBtn.textContent = isDev ? "✓ 保存しました" : "✓ GitHubに保存しました";
-            setTimeout(() => (toggleBtn.textContent = "✎ 編集"), 3000);
+            toggleBtn.textContent = isDev
+              ? "✓ 保存しました"
+              : "✓ 保存しました（反映まで少し待ってください）";
+            setTimeout(() => (toggleBtn.textContent = "✎ 編集"), 5000);
           } catch (error) {
             if (String(error).includes("401") || String(error).includes("パスワード")) {
               sessionStorage.removeItem(isDev ? "editToken" : tokenKey);
