@@ -73,7 +73,9 @@ export interface BackgroundMedia {
   url: string;
 }
 
-// 背景スライドショーは「背景専用フォルダ(写真+動画) + 投稿写真」を使う。
+export interface TileMedia extends BackgroundMedia {}
+
+// 背景スライドショーは「背景専用フォルダ(写真+動画) + 投稿写真・動画」を使う。
 // 写真を投稿していなくても、backgrounds のメディアだけで背景が表示される。
 export function getBackgroundMedia(): BackgroundMedia[] {
   return [
@@ -86,14 +88,27 @@ export function getBackgroundMedia(): BackgroundMedia[] {
     ...Object.values(photoUrlModules).map(
       (url): BackgroundMedia => ({ type: "image", url }),
     ),
+    ...Object.values(videoUrlModules).map(
+      (url): BackgroundMedia => ({ type: "video", url }),
+    ),
   ];
 }
 
-// ホームのセクションタイル用に背景写真のURLを返す
-export function getTileImageUrls(): string[] {
+// ホームのセクションタイル用。追加した写真・動画も順番に使う。
+export function getTileMedia(): TileMedia[] {
   return [
-    ...Object.values(backgroundUrlModules),
-    ...Object.values(photoUrlModules),
+    ...Object.values(backgroundUrlModules).map(
+      (url): TileMedia => ({ type: "image", url }),
+    ),
+    ...Object.values(backgroundVideoModules).map(
+      (url): TileMedia => ({ type: "video", url }),
+    ),
+    ...Object.values(photoUrlModules).map(
+      (url): TileMedia => ({ type: "image", url }),
+    ),
+    ...Object.values(videoUrlModules).map(
+      (url): TileMedia => ({ type: "video", url }),
+    ),
   ];
 }
 

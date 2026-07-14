@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
-import { getTileImageUrls, getPhotos } from "../lib/media";
+import { getTileMedia, getPhotos } from "../lib/media";
 import site from "../data/site.json";
 
 const posts = (await getCollection("blog")).sort(
@@ -14,8 +14,8 @@ const recentPhotos = getPhotos().slice(0, 4);
 const fmt = (d: Date) =>
   `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 
-// 各ページへのセクションタイル(背景写真は backgrounds から順に割り当て)
-const tileImages = getTileImageUrls();
+// 各ページへのセクションタイル(背景写真・動画を順に割り当て)
+const tileMedia = getTileMedia();
 const tiles = [
   { href: "/blog/", en: "Blog", ja: "ブログ", desc: site.home.secBlog },
   { href: "/photos/", en: "Photo", ja: "写真", desc: site.home.secPhoto },
@@ -25,7 +25,7 @@ const tiles = [
   { href: "/research/", en: "Research", ja: "研究", desc: site.home.secResearch },
 ].map((tile, i) => ({
   ...tile,
-  image: tileImages.length > 0 ? tileImages[i % tileImages.length] : null,
+  media: tileMedia.length > 0 ? tileMedia[i % tileMedia.length] : null,
 }));
 ---
 
@@ -50,13 +50,19 @@ const tiles = [
     {
       tiles.map((tile, i) => (
         <a class="tile" href={tile.href} style={`--delay: ${i * 0.06}s`}>
-          {tile.image && (
-            <span
-              class="tile-bg"
-              style={`background-image: url("${tile.image}")`}
-              aria-hidden="true"
-            />
-          )}
+          {
+            tile.media?.type === "image" ? (
+              <span
+                class="tile-bg"
+                style={`background-image: url("${tile.media.url}")`}
+                aria-hidden="true"
+              />
+            ) : tile.media?.type === "video" ? (
+              <video class="tile-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
+                <source src={tile.media.url} />
+              </video>
+            ) : null
+          }
           <span class="tile-body">
             <span class="tile-en">{tile.en}</span>
             <span class="tile-ja">{tile.ja}</span>
@@ -289,12 +295,23 @@ const tiles = [
     transition: transform 0.9s cubic-bezier(0.2, 0.6, 0.2, 1);
   }
 
-  .tile:hover .tile-bg {
+  .tile-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.9s cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+
+  .tile:hover .tile-bg,
+  .tile:hover .tile-video {
     transform: scale(1.07);
   }
 
   /* クリック時: 写真がぐっとズームして白フェードで遷移 */
-  .tile.leaving .tile-bg {
+  .tile.leaving .tile-bg,
+  .tile.leaving .tile-video {
     transform: scale(1.16);
     transition: transform 0.5s ease;
   }
@@ -303,10 +320,11 @@ const tiles = [
     transform: translateY(-4px) scale(1.015);
   }
 
-  .tile-bg::after {
+  .tile::after {
     content: "";
     position: absolute;
     inset: 0;
+    z-index: 0;
     background: linear-gradient(
       to top,
       rgba(15, 22, 32, 0.78),
@@ -318,6 +336,7 @@ const tiles = [
 
   .tile-body {
     position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

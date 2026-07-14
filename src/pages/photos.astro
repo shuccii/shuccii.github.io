@@ -15,19 +15,21 @@ const postMap = await getMediaPostMap();
   </p>
   {
     photos.length > 0 ? (
-      <div class="gallery">
+          <div class="gallery">
         {photos.map((photo) => {
           const refs = postMap.get(photo.file) ?? [];
           const post = refs[0];
           return (
             <figure>
-              {post ? (
-                <a href={`/blog/${post.slug}/`} title={`記事「${post.title}」を読む`}>
-                  <Image src={photo.image} alt={photo.name} width={640} loading="lazy" />
-                </a>
-              ) : (
+              <button
+                class="photo-zoom"
+                type="button"
+                data-full={photo.url}
+                data-alt={photo.name}
+                aria-label={`写真「${photo.name}」を拡大表示`}
+              >
                 <Image src={photo.image} alt={photo.name} width={640} loading="lazy" />
-              )}
+              </button>
               <figcaption>
                 {photo.name}
                 {post && (
@@ -52,7 +54,31 @@ const postMap = await getMediaPostMap();
       </div>
     )
   }
+  <dialog id="photo-lightbox" aria-label="写真の拡大表示">
+    <button id="photo-lightbox-close" type="button" aria-label="閉じる">×</button>
+    <img id="photo-lightbox-image" alt="" />
+  </dialog>
 </Layout>
+
+<script>
+  const lightbox = document.querySelector<HTMLDialogElement>("#photo-lightbox");
+  const lightboxImage = document.querySelector<HTMLImageElement>("#photo-lightbox-image");
+  const closeButton = document.querySelector<HTMLButtonElement>("#photo-lightbox-close");
+
+  document.querySelectorAll<HTMLButtonElement>(".photo-zoom").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!lightbox || !lightboxImage) return;
+      lightboxImage.src = button.dataset.full ?? "";
+      lightboxImage.alt = button.dataset.alt ?? "";
+      lightbox.showModal();
+    });
+  });
+
+  closeButton?.addEventListener("click", () => lightbox?.close());
+  lightbox?.addEventListener("click", (event) => {
+    if (event.target === lightbox) lightbox.close();
+  });
+</script>
 
 <style>
   .hint {
@@ -71,7 +97,16 @@ const postMap = await getMediaPostMap();
     margin: 0;
   }
 
-  figure :global(img) {
+  .photo-zoom {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+  }
+
+  .photo-zoom :global(img) {
     width: 100%;
     height: 180px;
     object-fit: cover;
@@ -80,7 +115,7 @@ const postMap = await getMediaPostMap();
     transition: opacity 0.25s ease;
   }
 
-  figure a:hover :global(img) {
+  .photo-zoom:hover :global(img) {
     opacity: 0.85;
   }
 
@@ -107,5 +142,40 @@ const postMap = await getMediaPostMap();
 
   .empty p:last-child {
     margin-bottom: 0;
+  }
+
+  #photo-lightbox {
+    max-width: min(96vw, 1200px);
+    max-height: 94vh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  #photo-lightbox::backdrop {
+    background: rgba(0, 0, 0, 0.78);
+  }
+
+  #photo-lightbox-image {
+    display: block;
+    max-width: 96vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+
+  #photo-lightbox-close {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.58);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
   }
 </style>
