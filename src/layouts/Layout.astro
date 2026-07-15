@@ -82,7 +82,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           <span class="site-title-ja">余白の庭</span>
           <span class="site-title-en">The Garden of Margin</span>
         </a>
-        <nav>
+        <nav class="desktop-nav">
           <ul>
             {
               nav.map((item) => (
@@ -114,6 +114,38 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         </nav>
       </div>
     </header>
+
+    <!-- iOS Safariでfixed配置がヘッダーのbackdrop-filterに拘束されないよう外へ分離 -->
+    <nav class="mobile-nav glass" aria-label="モバイルナビゲーション">
+      <ul>
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={{
+                  active:
+                    item.href === "/"
+                      ? current === "/"
+                      : current.startsWith(item.href),
+                }}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a
+            href="https://github.com/shuccii"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GITHUB ↗
+          </a>
+        </li>
+      </ul>
+    </nav>
 
     <main class:list={["container", { wide }]}>
       <slot />
@@ -1385,6 +1417,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     text-decoration: none;
   }
 
+  .mobile-nav {
+    display: none;
+  }
+
   /* Footer */
   .site-footer {
     padding: 1.5rem 0;
@@ -1612,6 +1648,27 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   @media (max-width: 768px) {
+    body,
+    body.background-dark {
+      --text: #222b34;
+      --text-muted: rgba(42, 52, 62, 0.78);
+      --accent: #1e5aa8;
+      --border: rgba(255, 255, 255, 0.58);
+      --bg-veil-color: 253 253 252;
+      --bg-veil-strength: 0.48;
+      --floating-bg: rgba(42, 52, 62, 0.78);
+      --floating-text: #ffffff;
+    }
+
+    /* iOS Safariのアドレスバー伸縮で背景が跳ねない固定サイズ */
+    .bg-layer {
+      height: 100vh;
+      height: 100lvh;
+      animation: none;
+      transform: none;
+      will-change: opacity;
+    }
+
     .container {
       padding-right: 1rem;
       padding-left: 1rem;
@@ -1647,7 +1704,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       font-size: 0.5rem;
     }
 
-    .site-header nav {
+    .site-header .desktop-nav {
+      display: none;
+    }
+
+    .mobile-nav {
+      display: block;
       position: fixed;
       top: auto;
       right: 0.55rem;
@@ -1670,29 +1732,44 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       -webkit-backdrop-filter: blur(11px) saturate(1.46) brightness(1.04);
       scrollbar-width: none;
       scroll-snap-type: x proximity;
+      color: #303a45;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.16)),
+        rgba(242, 246, 250, 0.72);
     }
 
-    .site-header nav::-webkit-scrollbar {
+    .mobile-nav::-webkit-scrollbar {
       display: none;
     }
 
-    .site-header nav ul {
+    .mobile-nav ul {
+      display: flex;
       width: max-content;
       flex-wrap: nowrap;
       gap: 0.85rem;
+      margin: 0;
       padding: 0 0.15rem;
+      list-style: none;
     }
 
-    .site-header nav li {
+    .mobile-nav li {
       scroll-snap-align: start;
     }
 
-    .site-header nav a {
+    .mobile-nav a {
       display: block;
       padding: 0.12rem 0;
+      color: #4f5964;
       font-size: 0.64rem;
       letter-spacing: 0.11em;
+      line-height: 1.5;
       white-space: nowrap;
+    }
+
+    .mobile-nav a:hover,
+    .mobile-nav a.active {
+      color: #1e5aa8;
+      text-decoration: none;
     }
 
     /* タッチ操作ではデスクトップ用の追従変形を残さない */
@@ -1706,10 +1783,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     #edit-bar {
+      top: 0.75rem;
+      top: calc(0.75rem + env(safe-area-inset-top, 0px));
       right: 0.75rem;
       right: calc(0.75rem + env(safe-area-inset-right, 0px));
-      bottom: 4.65rem;
-      bottom: calc(4.65rem + env(safe-area-inset-bottom, 0px));
+      bottom: auto;
     }
 
     #edit-bar button {

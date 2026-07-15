@@ -549,10 +549,10 @@ const blocks = [
   /* スマホ(iPhoneの縦長画面): 1画面に収まる縦積みレイアウト */
   @media (max-width: 768px) {
     .hero {
-      min-height: calc(100vh - 4.25rem);
-      min-height: calc(100svh - 4.25rem);
+      min-height: auto;
       padding: 1.8rem 0 2.5rem;
       justify-content: flex-start;
+      color: #222b34;
     }
 
     .hero-en {
@@ -578,6 +578,7 @@ const blocks = [
       box-shadow: 0 10px 30px rgba(28, 38, 55, 0.1);
       backdrop-filter: blur(10px) saturate(1.2);
       -webkit-backdrop-filter: blur(10px) saturate(1.2);
+      color: #222b34;
     }
 
     .m-line {
