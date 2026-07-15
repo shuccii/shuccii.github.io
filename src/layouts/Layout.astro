@@ -112,7 +112,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       </div>
     </header>
 
-    <main class:list={["container", "glass", "glass-page", { wide }]}>
+    <main class:list={["container", { wide }]}>
       <slot />
     </main>
 
@@ -1114,26 +1114,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       box-shadow 300ms ease;
   }
 
-  /* 本文の共通ガラス面: 全ページで背景との一体感を保つ */
-  .glass-page,
-  .glass-page:hover,
-  .glass-page:active {
-    --glass-scale: 1;
-    min-height: min(74vh, 920px);
-    margin-top: 1.6rem;
-    margin-bottom: 2.4rem;
-    padding: clamp(2rem, 5vw, 4.25rem) clamp(1.25rem, 4vw, 3.5rem) !important;
-    background:
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.22),
-        rgba(255, 255, 255, 0.08) 48%,
-        rgba(255, 255, 255, 0.13)
-      ),
-      rgba(255, 255, 255, 0.1);
-    transform: none;
-  }
-
   /* 内部の輪郭と屈折感: 縁に光が溜まる水面のようなリム */
   .glass::after {
     content: "";
@@ -1555,14 +1535,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     main.container {
       padding-top: 2.25rem;
       padding-bottom: 5.5rem;
-    }
-
-    main.container.glass-page {
-      min-height: calc(100vh - 10rem);
-      margin-top: 0.75rem;
-      margin-bottom: 1.25rem;
-      padding: 1.6rem 1rem 3.5rem !important;
-      border-radius: 16px;
     }
 
     h1 {
