@@ -414,7 +414,6 @@ const blocks = [
     transform: translateX(6px);
   }
 
-  /* 写真だけでなく、ブロック上のどこへカーソルを置いてもカードを反応させる */
   .block:hover .block-text {
     --glass-scale: 1.012;
     border-color: rgba(255, 255, 255, 0.7);
@@ -550,30 +549,61 @@ const blocks = [
   /* スマホ(iPhoneの縦長画面): 1画面に収まる縦積みレイアウト */
   @media (max-width: 680px) {
     .hero {
-      /* ヘッダーとページ余白を除いた、iPhoneのファーストビューいっぱいに */
-      min-height: calc(100vh - 10.25rem);
-      min-height: calc(100svh - 10.25rem);
-      padding: 0.5rem 0 3rem;
+      min-height: auto;
+      padding: 1.8rem 0 2.5rem;
+    }
+
+    .hero-en {
+      font-size: 0.66rem;
+      letter-spacing: 0.32em;
+      margin-bottom: 0.5rem;
     }
 
     .hero-title {
-      font-size: 1.95rem;
-      letter-spacing: 0.18em;
+      font-size: clamp(1.9rem, 9vw, 2.25rem);
+      letter-spacing: 0.14em;
+      margin-bottom: 1.35rem;
+      text-shadow: 0 1px 12px rgba(255, 255, 255, 0.58);
     }
 
     .manifesto {
-      padding-left: 1rem;
-      margin-bottom: 1.5rem;
+      max-width: none;
+      margin-bottom: 1rem;
+      padding: 1rem 1rem 1.05rem;
+      border: 1px solid rgba(255, 255, 255, 0.54);
+      border-radius: 16px;
+      background: rgba(247, 249, 251, 0.62);
+      box-shadow: 0 10px 30px rgba(28, 38, 55, 0.1);
+      backdrop-filter: blur(10px) saturate(1.2);
+      -webkit-backdrop-filter: blur(10px) saturate(1.2);
     }
 
     .m-line {
-      font-size: 0.9rem;
-      line-height: 1.95;
+      font-size: 0.86rem;
+      line-height: 1.85;
+      margin-bottom: 0.35rem;
+    }
+
+    .m-line:last-child {
+      margin-bottom: 0;
+    }
+
+    .hero-lead {
+      max-width: none;
+      padding: 0 0.15rem;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      color: color-mix(in srgb, var(--text) 78%, transparent);
+      text-shadow: 0 1px 8px rgba(255, 255, 255, 0.75);
+    }
+
+    .scroll-cue {
+      display: none;
     }
 
     .blocks {
-      gap: 4.5rem;
-      margin: 3.5rem 0 4.5rem;
+      gap: 4rem;
+      margin: 3.25rem 0 4rem;
     }
 
     .block,
@@ -595,16 +625,17 @@ const blocks = [
 
     .block-media {
       width: 100%;
-      aspect-ratio: 16 / 10;
+      aspect-ratio: 4 / 3;
+      border-radius: 15px;
     }
 
     .block-text,
     .block:nth-child(odd) .block-text,
     .block:nth-child(even) .block-text {
       width: auto;
-      margin: -1.35rem 0.65rem 0;
-      padding: 1.3rem 1.25rem 1.4rem;
-      border-radius: 18px;
+      margin: -1.15rem 0.55rem 0;
+      padding: 1.15rem 1.1rem 1.25rem;
+      border-radius: 16px;
     }
 
     .block-ja {
@@ -612,19 +643,32 @@ const blocks = [
     }
 
     .block-desc {
-      font-size: 0.84rem;
-      line-height: 1.85;
+      font-size: 0.81rem;
+      line-height: 1.75;
+    }
+
+    .block-more {
+      margin-top: 0.75rem;
     }
 
     .updates-strip {
       gap: 0.75rem;
-      margin-right: -1rem;
-      padding-right: 1rem;
+      margin: 0 -1rem;
+      padding: 0.3rem 1rem 1.15rem;
+      scroll-padding-inline: 1rem;
     }
 
     .update-card {
-      flex-basis: min(78vw, 290px);
+      flex-basis: min(82vw, 300px);
       padding: 0.95rem 1rem;
+    }
+
+    .section-head {
+      padding-top: 3.5rem;
+    }
+
+    .section-ghost {
+      font-size: clamp(2.7rem, 15vw, 3.8rem);
     }
 
     .photo-card .update-type {
