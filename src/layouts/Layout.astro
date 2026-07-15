@@ -923,6 +923,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
   /* 写真・動画背景(ゆっくりズームするKen Burnsエフェクト付き) */
@@ -1647,7 +1648,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     background: rgba(30, 90, 168, 0.04);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px), (hover: none) and (pointer: coarse) {
     body,
     body.background-dark {
       --text: #222b34;
@@ -1660,10 +1661,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       --floating-text: #ffffff;
     }
 
-    /* iOS Safariのアドレスバー伸縮で背景が跳ねない固定サイズ */
+    /* iOS Safariのアドレスバー伸縮とDynamic Islandに追従する背景 */
     .bg-layer {
       height: 100vh;
-      height: 100lvh;
+      height: 100dvh;
+      min-height: 100svh;
       animation: none;
       transform: none;
       will-change: opacity;
@@ -1708,13 +1710,17 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       display: none;
     }
 
+    /* モバイルではヘッダーをstickyにせず、ページ末尾で覗かないようにする */
+    .site-header {
+      position: relative;
+    }
+
     .mobile-nav {
       display: block;
       position: fixed;
       top: auto;
       right: 0.55rem;
-      bottom: 0.5rem;
-      bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+      bottom: max(0.5rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
       left: 0.55rem;
       z-index: 40;
       width: auto;
@@ -1805,8 +1811,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     .site-footer {
-      margin-bottom: 4.5rem;
-      margin-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+      margin-bottom: 6rem;
+      margin-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
     }
 
     #content-editor textarea {
