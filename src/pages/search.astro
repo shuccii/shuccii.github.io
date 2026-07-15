@@ -8,6 +8,7 @@ import Layout from "../layouts/Layout.astro";
   <form id="search-form" role="search">
     <input
       type="search"
+      class="glass"
       id="search-input"
       placeholder="キーワードを入力(例: データ同化)"
       autocomplete="off"
@@ -75,6 +76,7 @@ import Layout from "../layouts/Layout.astro";
 
     for (const item of hits) {
       const li = document.createElement("li");
+      li.className = "glass";
       li.innerHTML = `
         <p class="meta">
           <span class="type">${escapeHtml(item.type)}</span>
@@ -129,6 +131,7 @@ import Layout from "../layouts/Layout.astro";
 
 <style>
   #search-input {
+    --glass-radius: 2rem;
     font: inherit;
     width: 100%;
     max-width: 32em;
@@ -136,7 +139,7 @@ import Layout from "../layouts/Layout.astro";
     border: 1px solid var(--border);
     border-radius: 2rem;
     color: var(--surface-text);
-    background: var(--surface);
+    background-color: transparent;
     outline: none;
   }
 
@@ -157,8 +160,9 @@ import Layout from "../layouts/Layout.astro";
   }
 
   .results :global(li) {
-    padding: 1.1rem 0;
-    border-bottom: 1px solid var(--border);
+    --glass-radius: 16px;
+    padding: 1.1rem 1.15rem;
+    margin-bottom: 0.8rem;
   }
 
   .results :global(.meta) {

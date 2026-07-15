@@ -49,7 +49,11 @@ const blocks = [
   <section class="blocks">
     {
       blocks.map((block) => (
-        <a class="block" href={block.href}>
+        <a
+          class="block"
+          href={block.href}
+          data-glass-area={!['Profile', 'Research'].includes(block.en) ? true : undefined}
+        >
           <span class="block-ghost" aria-hidden="true">{block.en}</span>
           <span class="block-media" aria-hidden="true">
             {
@@ -65,7 +69,7 @@ const blocks = [
               ) : null
             }
           </span>
-          <span class="block-text">
+          <span class:list={["block-text", { glass: !['Profile', 'Research'].includes(block.en) }]}>
             <span class="block-en">{block.en}</span>
             <span class="block-ja">{block.ja}</span>
             <span class="block-desc" data-edit={`home.sec${block.en}`}>

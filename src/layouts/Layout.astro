@@ -368,10 +368,18 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           target.addEventListener("pointerup", () => el.classList.remove("is-pressed"));
         };
 
-        document.querySelectorAll<HTMLElement>(".glass").forEach((el) => {
-          // data-glass-area を持つ祖先(セクションブロック等)全体をポインター領域にする
-          attachLiquid(el.closest("[data-glass-area]") ?? el, el);
-        });
+        const initializeGlass = (root: ParentNode = document) => {
+          root.querySelectorAll<HTMLElement>(".glass:not([data-liquid-ready])").forEach((el) => {
+            el.dataset.liquidReady = "true";
+            // data-glass-area を持つ祖先(セクションブロック等)全体をポインター領域にする
+            attachLiquid(el.closest("[data-glass-area]") ?? el, el);
+          });
+        };
+
+        initializeGlass();
+        new MutationObserver((entries) => {
+          if (entries.some((entry) => entry.addedNodes.length > 0)) initializeGlass();
+        }).observe(document.body, { childList: true, subtree: true });
 
         // 背景適応: コンテンツがヘッダーの下へ入ったら不透明度を強める
         const header = document.querySelector<HTMLElement>(".site-header");

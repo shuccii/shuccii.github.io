@@ -56,7 +56,7 @@ const embeds = slots
     embeds.length > 0 ? (
       <div class="players">
         {embeds.map(({ key, embed }) => (
-          <figure>
+          <figure class="glass">
             <iframe
               src={embed!.src}
               height={embed!.height}
@@ -70,7 +70,7 @@ const embeds = slots
         ))}
       </div>
     ) : (
-      <div class="empty">
+      <div class="empty glass">
         <p>まだプレイリストが設定されていません。設定方法:</p>
         <ol>
           <li>
@@ -118,7 +118,9 @@ const embeds = slots
   }
 
   .players figure {
+    --glass-radius: 14px;
     margin: 0;
+    padding: 0.4rem;
   }
 
   .players iframe {
@@ -127,10 +129,8 @@ const embeds = slots
   }
 
   .empty {
+    --glass-radius: 14px;
     color: var(--surface-muted);
-    background: var(--panel);
-    border: 1px dashed var(--border);
-    border-radius: 4px;
     padding: 1.5rem;
   }
 

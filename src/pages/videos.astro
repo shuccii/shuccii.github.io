@@ -14,7 +14,7 @@ const youtubeVideos: { id: string; title: string }[] = [];
   <h1><span class="en">Video</span>ビデオ</h1>
   {
     videos.length === 0 && youtubeVideos.length === 0 ? (
-      <div class="empty">
+      <div class="empty glass">
         <p>まだビデオがありません。追加する方法は2つあります。</p>
         <ul>
           <li>
@@ -33,7 +33,7 @@ const youtubeVideos: { id: string; title: string }[] = [];
           const refs = postMap.get(video.file) ?? [];
           const post = refs[0];
           return (
-            <figure>
+            <figure class="glass">
               <video src={video.url} controls preload="metadata" />
               <figcaption>
                 {video.name}
@@ -48,7 +48,7 @@ const youtubeVideos: { id: string; title: string }[] = [];
           );
         })}
         {youtubeVideos.map(({ id, title }) => (
-          <figure>
+          <figure class="glass">
             <div class="yt-wrap">
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${id}`}
@@ -73,15 +73,17 @@ const youtubeVideos: { id: string; title: string }[] = [];
   }
 
   figure {
+    --glass-radius: 14px;
     margin: 0;
+    overflow: hidden;
   }
 
   video {
     width: 100%;
     height: 180px;
     object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--border);
+    border-radius: 13px 13px 0 0;
+    border: 0;
     background: #000;
   }
 
@@ -104,7 +106,8 @@ const youtubeVideos: { id: string; title: string }[] = [];
   figcaption {
     font-size: 0.82rem;
     color: var(--text-muted);
-    margin-top: 0.4rem;
+    margin: 0;
+    padding: 0.55rem 0.7rem 0.65rem;
   }
 
   .post-link {
@@ -131,10 +134,8 @@ const youtubeVideos: { id: string; title: string }[] = [];
   }
 
   .empty {
+    --glass-radius: 14px;
     color: var(--surface-muted);
-    background: var(--panel);
-    border: 1px dashed var(--border);
-    border-radius: 4px;
     padding: 1.5rem;
   }
 

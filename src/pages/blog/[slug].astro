@@ -57,7 +57,7 @@ const postVideos = post.data.videos
           </h2>
           <div class="media-grid">
             {postPhotos.map((photo) => (
-              <figure>
+              <figure class="glass">
                 <Image src={photo.image} alt={photo.name} width={640} loading="lazy" />
                 <figcaption>{photo.name}</figcaption>
               </figure>
@@ -75,7 +75,7 @@ const postVideos = post.data.videos
           </h2>
           <div class="video-grid">
             {postVideos.map((video) => (
-              <figure>
+              <figure class="glass">
                 <video src={video.url} controls preload="metadata" />
                 <figcaption>{video.name}</figcaption>
               </figure>
@@ -117,15 +117,17 @@ const postVideos = post.data.videos
   }
 
   .media-grid figure {
+    --glass-radius: 14px;
     margin: 0;
+    overflow: hidden;
   }
 
   .media-grid :global(img) {
     width: 100%;
     height: 160px;
     object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--border);
+    border-radius: 13px 13px 0 0;
+    border: 0;
   }
 
   .video-grid {
@@ -134,20 +136,23 @@ const postVideos = post.data.videos
   }
 
   .video-grid figure {
+    --glass-radius: 14px;
     margin: 0;
+    overflow: hidden;
   }
 
   .video-grid video {
     width: 100%;
-    border-radius: 4px;
-    border: 1px solid var(--border);
+    border-radius: 13px 13px 0 0;
+    border: 0;
     background: #000;
   }
 
   figcaption {
     font-size: 0.82rem;
     color: var(--text-muted);
-    margin-top: 0.3rem;
+    margin: 0;
+    padding: 0.55rem 0.7rem 0.65rem;
   }
 
   .back {

@@ -16,7 +16,7 @@ const fmt = (d: Date) =>
     posts.length > 0 ? (
       <ul class="posts">
         {posts.map((post) => (
-          <li>
+          <li class="glass">
             <time>{fmt(post.data.date)}</time>
             <div>
               <a href={`/blog/${post.id}/`}>{post.data.title}</a>
@@ -53,10 +53,11 @@ const fmt = (d: Date) =>
   }
 
   .posts li {
+    --glass-radius: 16px;
     display: flex;
     gap: 1.25rem;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.15rem;
+    margin-bottom: 0.8rem;
   }
 
   .posts time {
