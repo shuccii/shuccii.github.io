@@ -112,7 +112,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       </div>
     </header>
 
-    <main class:list={["container", { wide }]}>
+    <main class:list={["container", "glass", "glass-page", { wide }]}>
       <slot />
     </main>
 
@@ -1103,9 +1103,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       0 -1px 0 rgba(255, 255, 255, 0.08) inset,
       0 14px 38px rgba(20, 30, 55, 0.15),
       0 4px 10px rgba(20, 30, 55, 0.08);
-    /* ぼかしを浅くして背景の形を残し、彩度とコントラストで「水」の透明さを出す */
-    backdrop-filter: blur(13px) saturate(1.8) contrast(1.05) brightness(1.07);
-    -webkit-backdrop-filter: blur(13px) saturate(1.8) contrast(1.05) brightness(1.07);
+    /* すべての対応ブラウザで安定して効く標準のぼかし */
+    backdrop-filter: blur(17px) saturate(1.55) contrast(1.04) brightness(1.06);
+    -webkit-backdrop-filter: blur(17px) saturate(1.55) contrast(1.04) brightness(1.06);
     transform: translate3d(var(--move-x), var(--move-y), 0)
       scale(var(--glass-scale));
     transition:
@@ -1114,12 +1114,24 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       box-shadow 300ms ease;
   }
 
-  /* 対応ブラウザでは背景を水のように屈折させる(非対応環境は上のぼかしのみ) */
-  @supports (backdrop-filter: url(#liquid-glass-distortion)) {
-    .glass {
-      backdrop-filter: url(#liquid-glass-distortion) blur(10px) saturate(1.8)
-        contrast(1.05) brightness(1.07);
-    }
+  /* 本文の共通ガラス面: 全ページで背景との一体感を保つ */
+  .glass-page,
+  .glass-page:hover,
+  .glass-page:active {
+    --glass-scale: 1;
+    min-height: min(74vh, 920px);
+    margin-top: 1.6rem;
+    margin-bottom: 2.4rem;
+    padding: clamp(2rem, 5vw, 4.25rem) clamp(1.25rem, 4vw, 3.5rem) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.22),
+        rgba(255, 255, 255, 0.08) 48%,
+        rgba(255, 255, 255, 0.13)
+      ),
+      rgba(255, 255, 255, 0.1);
+    transform: none;
   }
 
   /* 内部の輪郭と屈折感: 縁に光が溜まる水面のようなリム */
@@ -1543,6 +1555,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     main.container {
       padding-top: 2.25rem;
       padding-bottom: 5.5rem;
+    }
+
+    main.container.glass-page {
+      min-height: calc(100vh - 10rem);
+      margin-top: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding: 1.6rem 1rem 3.5rem !important;
+      border-radius: 16px;
     }
 
     h1 {
