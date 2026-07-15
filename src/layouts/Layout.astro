@@ -334,20 +334,27 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           let raf = 0;
 
           target.addEventListener("pointermove", (event) => {
-            if (reduceMotion || band) return;
+            if (reduceMotion) return;
             const e = event as PointerEvent;
             const rect = el.getBoundingClientRect();
             const nx = (e.clientX - rect.left) / rect.width;
             const ny = (e.clientY - rect.top) / rect.height;
             cancelAnimationFrame(raf);
             raf = requestAnimationFrame(() => {
+              // ポインター付近へ光を集め、背景が曲がって見えるLensingを近似する
+              el.style.setProperty("--pointer-x", `${nx * 100}%`);
+              el.style.setProperty("--pointer-y", `${ny * 100}%`);
               // 動かしすぎるとガラスではなく浮遊カードに見えるため±2px程度に抑える
-              el.style.setProperty("--move-x", `${(nx - 0.5) * 4}px`);
-              el.style.setProperty("--move-y", `${(ny - 0.5) * 4}px`);
+              if (!band) {
+                el.style.setProperty("--move-x", `${(nx - 0.5) * 4}px`);
+                el.style.setProperty("--move-y", `${(ny - 0.5) * 4}px`);
+              }
             });
           });
 
           const reset = () => {
+            el.style.setProperty("--pointer-x", "50%");
+            el.style.setProperty("--pointer-y", "20%");
             el.style.setProperty("--move-x", "0px");
             el.style.setProperty("--move-y", "0px");
             el.classList.remove("is-pressed");
@@ -968,9 +975,15 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     .glass {
+      --pointer-x: 50% !important;
+      --pointer-y: 20% !important;
       --move-x: 0px !important;
       --move-y: 0px !important;
       --glass-scale: 1 !important;
+      transition: none;
+    }
+
+    .glass::before {
       transition: none;
     }
   }
@@ -1048,6 +1061,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     text-decoration: underline;
   }
 
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 72%, white);
+    outline-offset: 3px;
+  }
+
   ul,
   ol {
     padding-left: 1.4rem;
@@ -1082,6 +1103,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
      (ぼかし+彩度+明度、ポインター連動の鏡面光、内部反射)
   ======================================== */
   .glass {
+    --pointer-x: 50%;
+    --pointer-y: 20%;
     --move-x: 0px;
     --move-y: 0px;
     --glass-scale: 1;
@@ -1122,6 +1145,25 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       transform 400ms var(--spring),
       border-color 300ms ease,
       box-shadow 300ms ease;
+  }
+
+  /* ポインター付近に光が集まる鏡面ハイライト。ぼかしだけの曇りガラス化を防ぐ */
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      circle 170px at var(--pointer-x) var(--pointer-y),
+      rgba(255, 255, 255, 0.66),
+      rgba(255, 255, 255, 0.17) 31%,
+      transparent 70%
+    );
+    opacity: 0.58;
+    mix-blend-mode: screen;
+    transition: opacity 250ms ease;
   }
 
   /* 内部の輪郭と屈折感: 縁に光が溜まる水面のようなリム */
@@ -1193,6 +1235,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     border-radius: 0;
   }
 
+  .glass-band::before {
+    border-radius: 0;
+  }
+
   /* 背景適応: 暗い背景の上では帯の白を強めて、濃色の文字を読めるようにする */
   body.background-dark .glass-band {
     background:
@@ -1226,7 +1272,24 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     .glass {
       background: rgba(250, 250, 250, 0.88);
       border: 2px solid currentColor;
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
     }
+
+    .glass::before {
+      opacity: 0.18;
+    }
+  }
+
+  /* 将来、設定UIから透明度低減を選べるようにするための共通状態 */
+  html[data-reduce-transparency="true"] .glass {
+    background: rgba(248, 249, 252, 0.92);
+    backdrop-filter: blur(34px);
+    -webkit-backdrop-filter: blur(34px);
+  }
+
+  html[data-reduce-transparency="true"] .glass::before {
+    opacity: 0.12;
   }
 
   /* backdrop-filter非対応環境 */
