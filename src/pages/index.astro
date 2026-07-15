@@ -547,10 +547,12 @@ const blocks = [
   }
 
   /* スマホ(iPhoneの縦長画面): 1画面に収まる縦積みレイアウト */
-  @media (max-width: 680px) {
+  @media (max-width: 768px) {
     .hero {
-      min-height: auto;
+      min-height: calc(100vh - 4.25rem);
+      min-height: calc(100svh - 4.25rem);
       padding: 1.8rem 0 2.5rem;
+      justify-content: flex-start;
     }
 
     .hero-en {

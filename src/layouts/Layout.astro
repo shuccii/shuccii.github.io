@@ -51,7 +51,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <meta name="description" content={description} />
     <title>{title}</title>
   </head>
@@ -893,9 +896,16 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   /* 写真・動画背景(ゆっくりズームするKen Burnsエフェクト付き) */
   .bg-layer {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     opacity: 0;
     transition: opacity 2.4s ease;
     z-index: -2;
@@ -1601,7 +1611,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     background: rgba(30, 90, 168, 0.04);
   }
 
-  @media (max-width: 680px) {
+  @media (max-width: 768px) {
     .container {
       padding-right: 1rem;
       padding-left: 1rem;
@@ -1639,8 +1649,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
     .site-header nav {
       position: fixed;
+      top: auto;
       right: 0.55rem;
-      bottom: max(0.5rem, env(safe-area-inset-bottom));
+      bottom: 0.5rem;
+      bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
       left: 0.55rem;
       z-index: 40;
       width: auto;
@@ -1694,8 +1706,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     #edit-bar {
-      right: max(0.75rem, env(safe-area-inset-right));
-      bottom: calc(4.65rem + env(safe-area-inset-bottom));
+      right: 0.75rem;
+      right: calc(0.75rem + env(safe-area-inset-right, 0px));
+      bottom: 4.65rem;
+      bottom: calc(4.65rem + env(safe-area-inset-bottom, 0px));
     }
 
     #edit-bar button {
@@ -1705,14 +1719,16 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
     #content-editor {
       right: 0.75rem;
-      bottom: calc(8.9rem + env(safe-area-inset-bottom));
+      bottom: 8.9rem;
+      bottom: calc(8.9rem + env(safe-area-inset-bottom, 0px));
       width: calc(100vw - 1.5rem);
       max-height: min(72vh, 620px);
       padding: 0.9rem;
     }
 
     .site-footer {
-      margin-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+      margin-bottom: 4.5rem;
+      margin-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
     }
 
     #content-editor textarea {
