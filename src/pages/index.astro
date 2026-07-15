@@ -68,7 +68,7 @@ const blocks = [
               ) : null
             }
           </span>
-          <span class:list={["block-text", { glass: !['Profile', 'Research'].includes(block.en) }]}>
+          <span class="block-text glass">
             <span class="block-en">{block.en}</span>
             <span class="block-ja">{block.ja}</span>
             <span class="block-desc" data-edit={`home.sec${block.en}`}>
@@ -89,7 +89,7 @@ const blocks = [
   <div class="updates-strip">
     {
       recentPosts.map((post) => (
-        <a class="update-card" href={`/blog/${post.id}/`}>
+        <a class="update-card glass" href={`/blog/${post.id}/`}>
           <span class="update-type">BLOG</span>
           <span class="update-date">{fmt(post.data.date)}</span>
           <span class="update-title">{post.data.title}</span>
@@ -101,7 +101,7 @@ const blocks = [
     }
     {
       recentPhotos.map((photo) => (
-        <a class="update-card photo-card" href="/photos/">
+        <a class="update-card photo-card glass" href="/photos/">
           <Image src={photo.image} alt={photo.name} width={480} loading="lazy" />
           <span class="update-type">PHOTO</span>
           <span class="update-title">{photo.name}</span>
@@ -470,12 +470,6 @@ const blocks = [
     flex-direction: column;
     padding: 1.1rem 1.2rem;
     color: #30343a;
-    background: rgba(252, 252, 250, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.75);
-    border-radius: 16px;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.78) inset,
-      0 10px 28px rgba(25, 35, 50, 0.1);
   }
 
   .update-card:hover {
