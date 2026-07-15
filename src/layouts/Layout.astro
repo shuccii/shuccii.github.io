@@ -325,71 +325,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     </script>
 
     <script>
-      // Liquid Glass: ポインターに合わせた数pxの液体的な動きと押下の沈み込み
-      {
-        const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-        const attachLiquid = (target: Element, el: HTMLElement) => {
-          const band = el.classList.contains("glass-band");
-          let raf = 0;
-
-          target.addEventListener("pointermove", (event) => {
-            if (reduceMotion) return;
-            const e = event as PointerEvent;
-            const rect = el.getBoundingClientRect();
-            const nx = (e.clientX - rect.left) / rect.width;
-            const ny = (e.clientY - rect.top) / rect.height;
-            cancelAnimationFrame(raf);
-            raf = requestAnimationFrame(() => {
-              // ポインター付近へ光を集め、背景が曲がって見えるLensingを近似する
-              el.style.setProperty("--pointer-x", `${nx * 100}%`);
-              el.style.setProperty("--pointer-y", `${ny * 100}%`);
-              // 動かしすぎるとガラスではなく浮遊カードに見えるため±2px程度に抑える
-              if (!band) {
-                el.style.setProperty("--move-x", `${(nx - 0.5) * 4}px`);
-                el.style.setProperty("--move-y", `${(ny - 0.5) * 4}px`);
-              }
-            });
-          });
-
-          const reset = () => {
-            el.style.setProperty("--pointer-x", "50%");
-            el.style.setProperty("--pointer-y", "20%");
-            el.style.setProperty("--move-x", "0px");
-            el.style.setProperty("--move-y", "0px");
-            el.classList.remove("is-pressed");
-          };
-
-          target.addEventListener("pointerleave", reset);
-          target.addEventListener("pointercancel", reset);
-          target.addEventListener("pointerdown", () => {
-            if (!reduceMotion) el.classList.add("is-pressed");
-          });
-          target.addEventListener("pointerup", () => el.classList.remove("is-pressed"));
+      // 背景コンテンツがヘッダーの下へ入った際だけ可読性を少し強める
+      const glassHeader = document.querySelector<HTMLElement>(".site-header");
+      if (glassHeader) {
+        const updateGlassHeader = () => {
+          glassHeader.dataset.scrolled = window.scrollY > 24 ? "true" : "false";
         };
-
-        const initializeGlass = (root: ParentNode = document) => {
-          root.querySelectorAll<HTMLElement>(".glass:not([data-liquid-ready])").forEach((el) => {
-            el.dataset.liquidReady = "true";
-            // data-glass-area を持つ祖先(セクションブロック等)全体をポインター領域にする
-            attachLiquid(el.closest("[data-glass-area]") ?? el, el);
-          });
-        };
-
-        initializeGlass();
-        new MutationObserver((entries) => {
-          if (entries.some((entry) => entry.addedNodes.length > 0)) initializeGlass();
-        }).observe(document.body, { childList: true, subtree: true });
-
-        // 背景適応: コンテンツがヘッダーの下へ入ったら不透明度を強める
-        const header = document.querySelector<HTMLElement>(".site-header");
-        if (header) {
-          const updateHeader = () => {
-            header.dataset.scrolled = window.scrollY > 24 ? "true" : "false";
-          };
-          window.addEventListener("scroll", updateHeader, { passive: true });
-          updateHeader();
-        }
+        window.addEventListener("scroll", updateGlassHeader, { passive: true });
+        updateGlassHeader();
       }
     </script>
 
@@ -985,9 +928,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     .glass {
       --pointer-x: 50% !important;
       --pointer-y: 20% !important;
-      --move-x: 0px !important;
-      --move-y: 0px !important;
-      --glass-scale: 1 !important;
       transition: none;
     }
 
@@ -1113,9 +1053,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   .glass {
     --pointer-x: 50%;
     --pointer-y: 20%;
-    --move-x: 0px;
-    --move-y: 0px;
-    --glass-scale: 1;
     --glass-radius: 20px;
     position: relative;
     isolation: isolate;
@@ -1137,10 +1074,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     /* Appleのregular glassに近い、背景を残す軽いぼかし */
     backdrop-filter: blur(11px) saturate(1.42) contrast(1.025) brightness(1.04);
     -webkit-backdrop-filter: blur(11px) saturate(1.42) contrast(1.025) brightness(1.04);
-    transform: translate3d(var(--move-x), var(--move-y), 0)
-      scale(var(--glass-scale));
     transition:
-      transform 400ms var(--spring),
+      background 300ms ease,
       border-color 300ms ease,
       box-shadow 300ms ease;
   }
@@ -1199,25 +1134,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       inset 1px 1px 0 rgba(255, 255, 255, 0.22);
   }
 
-  .glass:hover {
-    --glass-scale: 1.012;
-    border-color: rgba(255, 255, 255, 0.7);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.65) inset,
-      0 18px 50px rgba(20, 30, 55, 0.19),
-      0 5px 14px rgba(20, 30, 55, 0.1);
-  }
-
-  .glass:active,
-  .glass.is-pressed {
-    --glass-scale: 0.975;
-  }
-
   /* ヘッダー・フッターなど全幅の帯: 変形させず、角丸と縦の境界線を消す */
   .glass-band,
   .glass-band:hover,
   .glass-band:active {
-    --glass-scale: 1;
     border: none;
     border-radius: 0;
     transform: none;
@@ -1235,8 +1155,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     border-radius: 0;
   }
 
-  /* 背景適応: 暗い背景の上では帯の白を強めて、濃色の文字を読めるようにする */
-  body.background-dark .glass-band {
+  /* 背景適応: 暗い背景では全Glassの透明度と文字コントラストを揃える */
+  body.background-dark .glass {
     background:
       linear-gradient(
         135deg,

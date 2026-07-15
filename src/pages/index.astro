@@ -52,7 +52,6 @@ const blocks = [
         <a
           class="block"
           href={block.href}
-          data-glass-area={!['Profile', 'Research'].includes(block.en) ? true : undefined}
         >
           <span class="block-ghost" aria-hidden="true">{block.en}</span>
           <span class="block-media" aria-hidden="true">
@@ -369,12 +368,6 @@ const blocks = [
     margin-bottom: clamp(1.5rem, 3.5vw, 3rem);
     padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1.5rem, 3vw, 2.6rem);
     color: #2c343d;
-    background: rgba(252, 252, 250, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    border-radius: 20px;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.75) inset,
-      0 14px 34px rgba(25, 35, 50, 0.12);
   }
 
   .block:nth-child(odd) .block-text {
@@ -383,16 +376,6 @@ const blocks = [
 
   .block:nth-child(even) .block-text {
     margin-right: -6%;
-  }
-
-  /* ブロック全体のホバーでもカードのガラスを反応させる */
-  .block:hover .block-text {
-    --glass-scale: 1.012;
-    border-color: rgba(255, 255, 255, 0.7);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.65) inset,
-      0 18px 50px rgba(20, 30, 55, 0.19),
-      0 5px 14px rgba(20, 30, 55, 0.1);
   }
 
   .block-en {
