@@ -5,9 +5,10 @@ import site from "../data/site.json";
 interface Props {
   title: string;
   description?: string;
+  wide?: boolean;
 }
 
-const { title, description = "谷 周一の個人サイト「余白の庭」。研究、日記、写真、音楽を置いておく場所。" } = Astro.props;
+const { title, description = "谷 周一の個人サイト「余白の庭」。研究、日記、写真、音楽を置いておく場所。", wide = false } = Astro.props;
 
 const nav = [
   { href: "/", label: "TOP" },
@@ -55,6 +56,15 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     <title>{title}</title>
   </head>
   <body>
+    <!-- Liquid Glass: 背景を水のように屈折させるSVGフィルター -->
+    <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden;">
+      <filter id="liquid-glass-distortion" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="92" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="soft" />
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="46" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+
     <!-- 背景(写真・動画がランダムに切り替わる2枚のレイヤー) -->
     <div class="bg-layer" id="bg-a" aria-hidden="true"></div>
     <div class="bg-layer" id="bg-b" aria-hidden="true"></div>
@@ -63,9 +73,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     <!-- ページ遷移フェード -->
     <div id="page-fade" aria-hidden="true"></div>
 
-    <header class="site-header">
+    <header class="site-header glass glass-band">
       <div class="container header-inner">
-        <a href="/" class="site-title">余白の庭</a>
+        <a href="/" class="site-title">
+          <span class="site-title-ja">余白の庭</span>
+          <span class="site-title-en">The Garden of Margin</span>
+        </a>
         <nav>
           <ul>
             {
@@ -99,11 +112,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       </div>
     </header>
 
-    <main class="container">
+    <main class:list={["container", { wide }]}>
       <slot />
     </main>
 
-    <footer class="site-footer">
+    <footer class="site-footer glass glass-band">
       <div class="container">
         {
           activeSns.length > 0 && (
@@ -168,7 +181,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           const distance = dark
             ? (138 - brightness) / 138
             : (brightness - 138) / (255 - 138);
-          const strength = dark ? 0.12 + distance * 0.16 : 0.18 + distance * 0.3;
+          const strength = dark ? 0.25 + distance * 0.1 : 0.25 + distance * 0.23;
           document.body.classList.toggle("background-dark", dark);
           document.body.classList.toggle("background-light", !dark);
           document.documentElement.style.setProperty("--bg-veil-color", "253 253 252");
@@ -278,7 +291,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         if (!a || a.target === "_blank" || a.origin !== location.origin) return;
         if (a.pathname === location.pathname && a.hash) return;
         e.preventDefault();
-        const tile = a.closest(".tile");
+        const tile = a.closest(".tile, .block");
         if (tile) tile.classList.add("leaving");
         fade.classList.add("on");
         setTimeout(() => (location.href = a.href), 340);
@@ -291,7 +304,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       // スクロールに合わせて要素をふわっと表示する
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
         const targets = document.querySelectorAll(
-          "main > *, .gallery figure, .video-list figure",
+          "main > *:not(.blocks), .blocks > .block, .gallery figure, .video-list figure",
         );
         const io = new IntersectionObserver(
           (entries) => {
@@ -307,6 +320,60 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         for (const el of targets) {
           el.classList.add("reveal");
           io.observe(el);
+        }
+      }
+    </script>
+
+    <script>
+      // Liquid Glass: ポインターに合わせた数pxの液体的な動きと押下の沈み込み
+      {
+        const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const attachLiquid = (target: Element, el: HTMLElement) => {
+          const band = el.classList.contains("glass-band");
+          let raf = 0;
+
+          target.addEventListener("pointermove", (event) => {
+            if (reduceMotion || band) return;
+            const e = event as PointerEvent;
+            const rect = el.getBoundingClientRect();
+            const nx = (e.clientX - rect.left) / rect.width;
+            const ny = (e.clientY - rect.top) / rect.height;
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => {
+              // 動かしすぎるとガラスではなく浮遊カードに見えるため±2px程度に抑える
+              el.style.setProperty("--move-x", `${(nx - 0.5) * 4}px`);
+              el.style.setProperty("--move-y", `${(ny - 0.5) * 4}px`);
+            });
+          });
+
+          const reset = () => {
+            el.style.setProperty("--move-x", "0px");
+            el.style.setProperty("--move-y", "0px");
+            el.classList.remove("is-pressed");
+          };
+
+          target.addEventListener("pointerleave", reset);
+          target.addEventListener("pointercancel", reset);
+          target.addEventListener("pointerdown", () => {
+            if (!reduceMotion) el.classList.add("is-pressed");
+          });
+          target.addEventListener("pointerup", () => el.classList.remove("is-pressed"));
+        };
+
+        document.querySelectorAll<HTMLElement>(".glass").forEach((el) => {
+          // data-glass-area を持つ祖先(セクションブロック等)全体をポインター領域にする
+          attachLiquid(el.closest("[data-glass-area]") ?? el, el);
+        });
+
+        // 背景適応: コンテンツがヘッダーの下へ入ったら不透明度を強める
+        const header = document.querySelector<HTMLElement>(".site-header");
+        if (header) {
+          const updateHeader = () => {
+            header.dataset.scrolled = window.scrollY > 24 ? "true" : "false";
+          };
+          window.addEventListener("scroll", updateHeader, { passive: true });
+          updateHeader();
         }
       }
     </script>
@@ -770,7 +837,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --floating-text: #29323b;
     --floating-border: rgba(207, 213, 219, 0.9);
     --bg-veil-color: 253 253 252;
-    --bg-veil-strength: 0.38;
+    --bg-veil-strength: 0.36;
+    --spring: cubic-bezier(0.2, 0.85, 0.25, 1.18);
   }
 
   body.background-dark {
@@ -851,9 +919,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     inset: 0;
     background: linear-gradient(
       to bottom,
-      rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 0.7)),
+      rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 0.78)),
       rgb(var(--bg-veil-color) / var(--bg-veil-strength)) 42%,
-      rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 1.18))
+      rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 1.16))
     );
     z-index: -1;
   }
@@ -898,6 +966,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       transform: none;
       transition: none;
     }
+
+    .glass {
+      --move-x: 0px !important;
+      --move-y: 0px !important;
+      --glass-scale: 1 !important;
+      transition: none;
+    }
   }
 
   .container {
@@ -911,6 +986,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     flex: 1;
     padding-top: 4rem;
     padding-bottom: 6rem;
+  }
+
+  /* ホームなど、PCで空間を広く使うページ */
+  main.container.wide {
+    max-width: 1160px;
+    padding-right: clamp(1.5rem, 4vw, 3.5rem);
+    padding-left: clamp(1.5rem, 4vw, 3.5rem);
   }
 
   h1 {
@@ -995,12 +1077,155 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     padding: 0;
   }
 
+  /* ========================================
+     Liquid Glass共通マテリアル
+     (ぼかし+彩度+明度、ポインター連動の鏡面光、内部反射)
+  ======================================== */
+  .glass {
+    --move-x: 0px;
+    --move-y: 0px;
+    --glass-scale: 1;
+    --glass-radius: 20px;
+    position: relative;
+    isolation: isolate;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.18),
+        rgba(255, 255, 255, 0.04) 45%,
+        rgba(255, 255, 255, 0.08)
+      ),
+      rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.48);
+    border-radius: var(--glass-radius);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 14px 38px rgba(20, 30, 55, 0.15),
+      0 4px 10px rgba(20, 30, 55, 0.08);
+    /* ぼかしを浅くして背景の形を残し、彩度とコントラストで「水」の透明さを出す */
+    backdrop-filter: blur(13px) saturate(1.8) contrast(1.05) brightness(1.07);
+    -webkit-backdrop-filter: blur(13px) saturate(1.8) contrast(1.05) brightness(1.07);
+    transform: translate3d(var(--move-x), var(--move-y), 0)
+      scale(var(--glass-scale));
+    transition:
+      transform 400ms var(--spring),
+      border-color 300ms ease,
+      box-shadow 300ms ease;
+  }
+
+  /* 対応ブラウザでは背景を水のように屈折させる(非対応環境は上のぼかしのみ) */
+  @supports (backdrop-filter: url(#liquid-glass-distortion)) {
+    .glass {
+      backdrop-filter: url(#liquid-glass-distortion) blur(10px) saturate(1.8)
+        contrast(1.05) brightness(1.07);
+    }
+  }
+
+  /* 内部の輪郭と屈折感: 縁に光が溜まる水面のようなリム */
+  .glass::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: calc(var(--glass-radius) - 1px);
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background:
+      radial-gradient(
+        120% 70% at 50% -14%,
+        rgba(255, 255, 255, 0.3),
+        transparent 55%
+      ),
+      linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.2),
+        transparent 28%,
+        transparent 68%,
+        rgba(255, 255, 255, 0.12)
+      );
+    box-shadow: inset 0 0 22px -8px rgba(255, 255, 255, 0.55);
+  }
+
+  .glass:hover {
+    --glass-scale: 1.012;
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.65) inset,
+      0 18px 50px rgba(20, 30, 55, 0.19),
+      0 5px 14px rgba(20, 30, 55, 0.1);
+  }
+
+  .glass:active,
+  .glass.is-pressed {
+    --glass-scale: 0.975;
+  }
+
+  /* ヘッダー・フッターなど全幅の帯: 変形させず、角丸と縦の境界線を消す */
+  .glass-band,
+  .glass-band:hover,
+  .glass-band:active {
+    --glass-scale: 1;
+    border: none;
+    border-radius: 0;
+    transform: none;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 rgba(255, 255, 255, 0.25) inset,
+      0 6px 24px rgba(25, 35, 50, 0.08);
+  }
+
+  .glass-band::after {
+    border-radius: 0;
+  }
+
+  /* 背景適応: 暗い背景の上では帯の白を強めて、濃色の文字を読めるようにする */
+  body.background-dark .glass-band {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.46),
+        rgba(255, 255, 255, 0.22) 45%,
+        rgba(255, 255, 255, 0.3)
+      ),
+      rgba(255, 255, 255, 0.32);
+  }
+
+  /* 背景適応: コンテンツがヘッダーの下に入ったら不透明度と影を強める */
+  .site-header[data-scrolled="true"] {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.52),
+        rgba(255, 255, 255, 0.28) 45%,
+        rgba(255, 255, 255, 0.36)
+      ),
+      rgba(255, 255, 255, 0.34);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 14px 44px rgba(20, 30, 55, 0.16);
+  }
+
+  /* コントラスト増加時はガラスをほぼ不透明にする */
+  @media (prefers-contrast: more) {
+    .glass {
+      background: rgba(250, 250, 250, 0.88);
+      border: 2px solid currentColor;
+    }
+  }
+
+  /* backdrop-filter非対応環境 */
+  @supports not (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+  ) {
+    .glass {
+      background: rgba(248, 249, 250, 0.92);
+    }
+  }
+
   /* Header */
   .site-header {
-    background: rgba(253, 253, 252, 0.78);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -1009,7 +1234,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   body.background-dark .site-header,
   body.background-dark .site-footer {
     color: #222222;
-    background: rgba(253, 253, 252, 0.78);
+  }
+
+  body.background-dark .site-footer {
+    background: rgba(253, 253, 252, 0.68);
   }
 
   body.background-dark .site-header a,
@@ -1024,6 +1252,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   .header-inner {
+    max-width: 1160px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1034,10 +1263,25 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   .site-title {
-    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    color: var(--text);
+  }
+
+  .site-title-ja {
+    font-weight: 500;
     font-size: 0.95rem;
     letter-spacing: 0.28em;
-    color: var(--text);
+  }
+
+  .site-title-en {
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 0.56rem;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    /* ヘッダー帯は常に白いので、背景の明暗に連動させず固定色にする */
+    color: #8a939e;
   }
 
   .site-title:hover {
@@ -1068,8 +1312,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   /* Footer */
   .site-footer {
-    border-top: 1px solid var(--border);
-    background: rgba(253, 253, 252, 0.7);
     padding: 1.5rem 0;
     font-size: 0.82rem;
     letter-spacing: 0.05em;
@@ -1320,8 +1562,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       padding-bottom: 0.7rem;
     }
 
-    .site-title {
+    .site-title-ja {
       font-size: 0.86rem;
+    }
+
+    .site-title-en {
+      font-size: 0.5rem;
     }
 
     .site-header nav {

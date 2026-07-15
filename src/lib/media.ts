@@ -75,20 +75,15 @@ export interface BackgroundMedia {
 
 export interface TileMedia extends BackgroundMedia {}
 
-// 背景スライドショーは「背景専用フォルダ(写真+動画) + 投稿写真・動画」を使う。
-// 写真を投稿していなくても、backgrounds のメディアだけで背景が表示される。
+// 背景スライドショーは背景専用フォルダ src/assets/backgrounds/ のメディアだけを使う。
+// 投稿した写真・動画は自動では反映されない。背景に使いたいファイルは
+// backgrounds/ フォルダへ手動でコピーして追加する。
 export function getBackgroundMedia(): BackgroundMedia[] {
   return [
     ...Object.values(backgroundUrlModules).map(
       (url): BackgroundMedia => ({ type: "image", url }),
     ),
     ...Object.values(backgroundVideoModules).map(
-      (url): BackgroundMedia => ({ type: "video", url }),
-    ),
-    ...Object.values(photoUrlModules).map(
-      (url): BackgroundMedia => ({ type: "image", url }),
-    ),
-    ...Object.values(videoUrlModules).map(
       (url): BackgroundMedia => ({ type: "video", url }),
     ),
   ];

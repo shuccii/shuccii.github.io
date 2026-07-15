@@ -14,22 +14,22 @@ const recentPhotos = getPhotos().slice(0, 4);
 const fmt = (d: Date) =>
   `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 
-// 各ページへのセクションタイル(背景写真・動画を順に割り当て)
+// 各ページへのセクションブロック(写真・動画を順に割り当て)
 const tileMedia = getTileMedia();
-const tiles = [
+const blocks = [
   { href: "/blog/", en: "Blog", ja: "ブログ", desc: site.home.secBlog },
   { href: "/photos/", en: "Photo", ja: "写真", desc: site.home.secPhoto },
   { href: "/videos/", en: "Video", ja: "ビデオ", desc: site.home.secVideo },
   { href: "/music/", en: "Music", ja: "音楽", desc: site.home.secMusic },
   { href: "/profile/", en: "Profile", ja: "プロフィール", desc: site.home.secProfile },
   { href: "/research/", en: "Research", ja: "研究", desc: site.home.secResearch },
-].map((tile, i) => ({
-  ...tile,
+].map((block, i) => ({
+  ...block,
   media: tileMedia.length > 0 ? tileMedia[i % tileMedia.length] : null,
 }));
 ---
 
-<Layout title="余白の庭 | Shuichi Tani">
+<Layout title="余白の庭 | Shuichi Tani" wide>
   <section class="hero">
     <p class="hero-en" data-edit="home.titleEn">{site.home.titleEn}</p>
     <h1 class="hero-title" data-edit="home.title">{site.home.title}</h1>
@@ -46,42 +46,47 @@ const tiles = [
     <p class="scroll-cue" aria-hidden="true">SCROLL<span></span></p>
   </section>
 
-  <section class="tiles">
+  <section class="blocks">
     {
-      tiles.map((tile, i) => (
-        <a class="tile" href={tile.href} style={`--delay: ${i * 0.06}s`}>
-          {
-            tile.media?.type === "image" ? (
-              <span
-                class="tile-bg"
-                style={`background-image: url("${tile.media.url}")`}
-                aria-hidden="true"
-              />
-            ) : tile.media?.type === "video" ? (
-              <video class="tile-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
-                <source src={tile.media.url} />
-              </video>
-            ) : null
-          }
-          <span class="tile-body">
-            <span class="tile-en">{tile.en}</span>
-            <span class="tile-ja">{tile.ja}</span>
-            <span class="tile-desc" data-edit={`home.sec${tile.en}`}>
-              {tile.desc}
+      blocks.map((block) => (
+        <a class="block" href={block.href} data-glass-area>
+          <span class="block-ghost" aria-hidden="true">{block.en}</span>
+          <span class="block-media" aria-hidden="true">
+            {
+              block.media?.type === "image" ? (
+                <span
+                  class="block-bg"
+                  style={`background-image: url("${block.media.url}")`}
+                />
+              ) : block.media?.type === "video" ? (
+                <video class="block-video" autoplay muted loop playsinline preload="metadata">
+                  <source src={block.media.url} />
+                </video>
+              ) : null
+            }
+          </span>
+          <span class="block-text glass">
+            <span class="block-en">{block.en}</span>
+            <span class="block-ja">{block.ja}</span>
+            <span class="block-desc" data-edit={`home.sec${block.en}`}>
+              {block.desc}
             </span>
-            <span class="tile-more">View more →</span>
+            <span class="block-more">View more →</span>
           </span>
         </a>
       ))
     }
   </section>
 
-  <h2><span class="en">Updates</span>最近の更新</h2>
+  <div class="section-head">
+    <span class="section-ghost" aria-hidden="true">Updates</span>
+    <h2 class="section-title">最近の更新</h2>
+  </div>
   <p class="updates-hint">→ 横にスクロールできます</p>
   <div class="updates-strip">
     {
       recentPosts.map((post) => (
-        <a class="update-card" href={`/blog/${post.id}/`}>
+        <a class="update-card glass" href={`/blog/${post.id}/`}>
           <span class="update-type">BLOG</span>
           <span class="update-date">{fmt(post.data.date)}</span>
           <span class="update-title">{post.data.title}</span>
@@ -93,7 +98,7 @@ const tiles = [
     }
     {
       recentPhotos.map((photo) => (
-        <a class="update-card photo-card" href="/photos/">
+        <a class="update-card photo-card glass" href="/photos/">
           <Image src={photo.image} alt={photo.name} width={480} loading="lazy" />
           <span class="update-type">PHOTO</span>
           <span class="update-title">{photo.name}</span>
@@ -110,11 +115,11 @@ const tiles = [
 
 <style>
   .hero {
-    min-height: 56vh;
+    min-height: 62vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 2rem 0 3rem;
+    padding: 2.5rem 0 3.5rem;
     position: relative;
   }
 
@@ -124,16 +129,13 @@ const tiles = [
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: 0.6rem;
-  }
-
-  .hero-title {
-    font-size: 2.6rem;
-    letter-spacing: 0.24em;
-    margin-bottom: 0.6rem;
     animation: heroIn 1s ease both;
   }
 
-  .hero-en {
+  .hero-title {
+    font-size: clamp(2.6rem, 4.5vw, 3.4rem);
+    letter-spacing: 0.26em;
+    margin-bottom: 0.6rem;
     animation: heroIn 1s ease both;
   }
 
@@ -158,7 +160,7 @@ const tiles = [
 
   /* 余白の庭: 意味を語る4行(1行ずつ順にふわっと現れる) */
   .manifesto {
-    max-width: 34em;
+    max-width: 36em;
     border-left: 1px solid var(--border);
     padding-left: 1.3rem;
     margin-bottom: 2rem;
@@ -210,7 +212,7 @@ const tiles = [
   }
 
   .hero-lead {
-    max-width: 34em;
+    max-width: 36em;
     font-size: 0.88rem;
     color: var(--text-muted);
   }
@@ -254,133 +256,194 @@ const tiles = [
     }
   }
 
-  /* セクションタイル */
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.1rem;
-    margin-bottom: 2rem;
+  /* 巨大なアウトライン欧文(セクション見出しの背景装飾) */
+  .block-ghost,
+  .section-ghost {
+    display: block;
+    font-family: "Times New Roman", "Hiragino Mincho ProN", Georgia, serif;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: transparent;
+    /* 写真の上でもクッキリ読めるよう、白のストロークに淡い影を添える */
+    -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.92);
+    filter: drop-shadow(0 1px 2px rgba(30, 40, 55, 0.4))
+      drop-shadow(0 6px 18px rgba(30, 40, 55, 0.22));
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
   }
 
-  .tile {
+  /* セクションブロック: 大きな写真 + ガラス質のテキストカードを交互に */
+  .blocks {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(5rem, 10vw, 9rem);
+    margin: clamp(4rem, 8vw, 7rem) 0 clamp(5rem, 9vw, 8rem);
+  }
+
+  .block {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .block:hover {
+    text-decoration: none;
+  }
+
+  .block:nth-child(even) {
+    flex-direction: row-reverse;
+  }
+
+  .block-ghost {
+    position: absolute;
+    top: calc(clamp(3.2rem, 8vw, 6.8rem) * -0.52);
+    font-size: clamp(3.2rem, 8vw, 6.8rem);
+    z-index: 2;
+  }
+
+  .block:nth-child(odd) .block-ghost {
+    left: -0.03em;
+  }
+
+  .block:nth-child(even) .block-ghost {
+    right: -0.03em;
+  }
+
+  .block-media {
     position: relative;
     display: block;
-    min-height: 230px;
-    border-radius: 8px;
+    width: 62%;
+    aspect-ratio: 3 / 2;
+    border-radius: 18px;
     overflow: hidden;
-    border: 1px solid var(--border);
-    color: #fff;
-    background: #33404e;
-    transition:
-      transform 0.45s cubic-bezier(0.2, 0.6, 0.2, 1),
-      box-shadow 0.45s ease;
+    background: #b9c2cb;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+      0 24px 60px rgba(25, 35, 50, 0.16);
   }
 
-  .tile:first-child {
-    grid-column: 1 / -1;
-    min-height: 260px;
-  }
-
-  .tile:hover {
-    text-decoration: none;
-    transform: translateY(-4px);
-    box-shadow: 0 14px 32px rgba(20, 30, 45, 0.18);
-  }
-
-  .tile-bg {
+  .block-bg {
     position: absolute;
     inset: 0;
     background-size: cover;
     background-position: center;
-    transition: transform 0.9s cubic-bezier(0.2, 0.6, 0.2, 1);
+    transition: transform 1.1s cubic-bezier(0.2, 0.6, 0.2, 1);
   }
 
-  .tile-video {
+  .block-video {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.9s cubic-bezier(0.2, 0.6, 0.2, 1);
+    transition: transform 1.1s cubic-bezier(0.2, 0.6, 0.2, 1);
   }
 
-  .tile:hover .tile-bg,
-  .tile:hover .tile-video {
-    transform: scale(1.07);
+  .block:hover .block-bg,
+  .block:hover .block-video {
+    transform: scale(1.05);
   }
 
   /* クリック時: 写真がぐっとズームして白フェードで遷移 */
-  .tile.leaving .tile-bg,
-  .tile.leaving .tile-video {
-    transform: scale(1.16);
+  .block.leaving .block-bg,
+  .block.leaving .block-video {
+    transform: scale(1.12);
     transition: transform 0.5s ease;
   }
 
-  .tile.leaving {
-    transform: translateY(-4px) scale(1.015);
-  }
-
-  .tile::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: linear-gradient(
-      to top,
-      rgba(15, 22, 32, 0.78),
-      rgba(15, 22, 32, 0.28) 55%,
-      rgba(15, 22, 32, 0.15)
-    );
-    transition: background 0.45s ease;
-  }
-
-  .tile-body {
-    position: relative;
+  .block-text {
+    --glass-radius: 20px;
     z-index: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
-    min-height: inherit;
-    padding: 1.4rem 1.5rem;
+    width: 44%;
+    margin-bottom: clamp(1.5rem, 3.5vw, 3rem);
+    padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1.5rem, 3vw, 2.6rem);
+    color: #2c343d;
   }
 
-  .tile-en {
+  .block:nth-child(odd) .block-text {
+    margin-left: -6%;
+  }
+
+  .block:nth-child(even) .block-text {
+    margin-right: -6%;
+  }
+
+  /* ブロック全体のホバーでもカードのガラスを反応させる */
+  .block:hover .block-text {
+    --glass-scale: 1.012;
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.65) inset,
+      0 18px 50px rgba(20, 30, 55, 0.19),
+      0 5px 14px rgba(20, 30, 55, 0.1);
+  }
+
+  .block-en {
     font-size: 0.66rem;
     letter-spacing: 0.34em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.85);
+    color: #1e5aa8;
   }
 
-  .tile-ja {
-    font-size: 1.35rem;
+  .block-ja {
+    font-size: 1.4rem;
     font-weight: 600;
-    letter-spacing: 0.16em;
-    margin: 0.15rem 0 0.3rem;
+    letter-spacing: 0.18em;
+    margin: 0.3rem 0 0.55rem;
   }
 
-  .tile-desc {
-    font-size: 0.82rem;
-    line-height: 1.8;
-    color: rgba(255, 255, 255, 0.88);
-    max-width: 36em;
+  .block-desc {
+    font-size: 0.86rem;
+    line-height: 1.95;
+    color: #4b545e;
   }
 
-  .tile-more {
-    margin-top: 0.7rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.22em;
-    color: rgba(255, 255, 255, 0.75);
+  .block-more {
+    margin-top: 1rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.24em;
+    color: #6b7684;
     transition:
       color 0.3s ease,
       transform 0.3s ease;
   }
 
-  .tile:hover .tile-more {
-    color: #fff;
+  .block:hover .block-more {
+    color: #1e5aa8;
     transform: translateX(6px);
   }
 
-  /* 最近の更新(横スクロール) */
+  /* 最近の更新 */
+  .section-head {
+    position: relative;
+    padding-top: clamp(1.6rem, 4vw, 3.2rem);
+    margin-bottom: 0.4rem;
+  }
+
+  .section-ghost {
+    position: absolute;
+    top: 0;
+    left: -0.03em;
+    font-size: clamp(2.8rem, 7vw, 5.6rem);
+    z-index: 0;
+  }
+
+  .section-title {
+    position: relative;
+    z-index: 1;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    margin: 0;
+  }
+
   .updates-hint {
     font-size: 0.78rem;
     color: var(--text-muted);
@@ -406,29 +469,17 @@ const tiles = [
   }
 
   .update-card {
+    --glass-radius: 16px;
     flex: 0 0 240px;
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     padding: 1.1rem 1.2rem;
-    /* 背景メディアの明度には連動させず、更新欄だけは一定の淡いガラス調にする */
-    background: rgba(242, 244, 243, 0.62);
-    border: 1px solid rgba(218, 222, 220, 0.82);
-    border-radius: 8px;
     color: #30343a;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    transition:
-      transform 0.35s ease,
-      box-shadow 0.35s ease,
-      border-color 0.35s ease;
   }
 
   .update-card:hover {
     text-decoration: none;
-    transform: translateY(-4px);
-    border-color: #1e5aa8;
-    box-shadow: 0 10px 24px rgba(20, 30, 45, 0.1);
   }
 
   .update-type {
@@ -480,15 +531,29 @@ const tiles = [
     font-size: 0.88rem;
   }
 
-  @media (max-width: 480px) {
+  /* タブレット: 重なりを浅くする */
+  @media (max-width: 900px) {
+    .block-media {
+      width: 58%;
+    }
+
+    .block-text {
+      width: 48%;
+    }
+  }
+
+  /* スマホ(iPhoneの縦長画面): 1画面に収まる縦積みレイアウト */
+  @media (max-width: 680px) {
     .hero {
-      min-height: auto;
-      padding: 0.5rem 0 2.5rem;
+      /* ヘッダーとページ余白を除いた、iPhoneのファーストビューいっぱいに */
+      min-height: calc(100vh - 10.25rem);
+      min-height: calc(100svh - 10.25rem);
+      padding: 0.5rem 0 3rem;
     }
 
     .hero-title {
-      font-size: 1.85rem;
-      letter-spacing: 0.16em;
+      font-size: 1.95rem;
+      letter-spacing: 0.18em;
     }
 
     .manifesto {
@@ -501,23 +566,48 @@ const tiles = [
       line-height: 1.95;
     }
 
-    .tiles {
-      grid-template-columns: 1fr;
-      gap: 0.85rem;
+    .blocks {
+      gap: 4.5rem;
+      margin: 3.5rem 0 4.5rem;
     }
 
-    .tile,
-    .tile:first-child {
-      grid-column: auto;
-      min-height: 188px;
+    .block,
+    .block:nth-child(even) {
+      flex-direction: column;
+      align-items: stretch;
     }
 
-    .tile-body {
-      padding: 1rem 1.1rem;
+    .block-ghost {
+      position: absolute;
+      top: calc(clamp(2.6rem, 13vw, 3.6rem) * -0.55);
+      font-size: clamp(2.6rem, 13vw, 3.6rem);
     }
 
-    .tile-ja {
-      font-size: 1.18rem;
+    .block:nth-child(even) .block-ghost {
+      right: auto;
+      left: -0.03em;
+    }
+
+    .block-media {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+    }
+
+    .block-text,
+    .block:nth-child(odd) .block-text,
+    .block:nth-child(even) .block-text {
+      width: auto;
+      margin: -2.2rem 0.9rem 0;
+      padding: 1.3rem 1.25rem 1.4rem;
+    }
+
+    .block-ja {
+      font-size: 1.2rem;
+    }
+
+    .block-desc {
+      font-size: 0.84rem;
+      line-height: 1.85;
     }
 
     .updates-strip {

@@ -29,7 +29,7 @@
     "skillsML": "回帰(線形回帰・Lasso・PLS・SVR・XGBoost)、分類(kNN・Random Forest)、クラスタリング、PCA・UMAP、交差検証と再現性の管理",
     "skillsPython": "Python によるデータ解析・可視化、Jupyter Notebook での実験と整理、scikit-learn を中心とした機械学習の実装",
     "skillsTools": "Git / GitHub、uv による環境管理、VS Code、スライド・レポート作成",
-    "interests": "カメラや本を読むのが好きです。音楽も好きで、最近はサカナクションをよく聴いています。",
+    "interests": "カメラで写真を撮ったり、本を読むのが好きです。音楽も好きで最近はよくサカナクションを聴いています。",
     "qualifications": ""
   },
   "research": {
