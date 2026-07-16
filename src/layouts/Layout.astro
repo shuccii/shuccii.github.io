@@ -250,7 +250,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           return i;
         };
 
-        const setMedia = (layer, media, onReady) => {
+        const setMedia = (layer, media, onReady, onFailure) => {
           layer.innerHTML = "";
           layer.style.backgroundImage = "";
           if (media.type === "image") {
@@ -260,24 +260,45 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               applyBackgroundTone(brightnessFromElement(img));
               onReady();
             };
+            img.onerror = onFailure;
             img.src = media.url;
           } else {
             const v = document.createElement("video");
+            let settled = false;
+            const timeout = window.setTimeout(() => finish(false), 12000);
+            const finish = (ready) => {
+              if (settled) return;
+              settled = true;
+              window.clearTimeout(timeout);
+              if (!ready) {
+                v.remove();
+                onFailure();
+                return;
+              }
+              applyBackgroundTone(brightnessFromElement(v));
+              onReady();
+            };
+
             v.muted = true;
+            v.defaultMuted = true;
             v.loop = true;
             v.playsInline = true;
+            v.autoplay = true;
             v.preload = "auto";
+            v.setAttribute("muted", "");
+            v.setAttribute("playsinline", "");
+            v.setAttribute("webkit-playsinline", "");
             v.src = media.url;
             v.addEventListener(
-              "canplay",
+              "loadeddata",
               () => {
-                v.play().catch(() => {});
-                applyBackgroundTone(brightnessFromElement(v));
-                onReady();
+                v.play().then(() => finish(true)).catch(() => finish(false));
               },
               { once: true },
             );
+            v.addEventListener("error", () => finish(false), { once: true });
             layer.appendChild(v);
+            v.load();
           }
         };
 
@@ -285,20 +306,28 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           const i = pick();
           lastIndex = i;
           const layer = layers[showing];
-          setMedia(layer, bgMedia[i], () => {
-            layer.style.opacity = "1";
-            const other = layers[1 - showing];
-            other.style.opacity = "0";
-            // 裏に回った動画は停止してリソースを解放
-            const oldVideo = other.querySelector("video");
-            if (oldVideo) setTimeout(() => oldVideo.pause(), 2600);
-            showing = 1 - showing;
-            if (bgMedia.length > 1) {
-              // 動画は長め、写真は9秒で次へ
-              const wait = bgMedia[i].type === "video" ? 22000 : 9000;
-              setTimeout(swap, wait);
-            }
-          });
+          setMedia(
+            layer,
+            bgMedia[i],
+            () => {
+              layer.style.opacity = "1";
+              const other = layers[1 - showing];
+              other.style.opacity = "0";
+              // 裏に回った動画は停止してリソースを解放
+              const oldVideo = other.querySelector("video");
+              if (oldVideo) setTimeout(() => oldVideo.pause(), 2600);
+              showing = 1 - showing;
+              if (bgMedia.length > 1) {
+                // 動画は長め、写真は9秒で次へ
+                const wait = bgMedia[i].type === "video" ? 22000 : 9000;
+                setTimeout(swap, wait);
+              }
+            },
+            () => {
+              // 読み込めないメディアがあってもスライドショーを止めない
+              setTimeout(swap, 250);
+            },
+          );
         };
 
         swap();
