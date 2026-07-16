@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { getCollection } from "astro:content";
-import { Image } from "astro:assets";
+import { Image, getImage } from "astro:assets";
 import { getTileMedia, getPhotos } from "../lib/media";
 import site from "../data/site.json";
 
@@ -16,17 +16,40 @@ const fmt = (d: Date) =>
 
 // 各ページへのセクションブロック(写真・動画を順に割り当て)
 const tileMedia = getTileMedia();
-const blocks = [
+const blockDefs = [
   { href: "/blog/", en: "Blog", ja: "ブログ", desc: site.home.secBlog },
   { href: "/photos/", en: "Photo", ja: "写真", desc: site.home.secPhoto },
   { href: "/videos/", en: "Video", ja: "ビデオ", desc: site.home.secVideo },
   { href: "/music/", en: "Music", ja: "音楽", desc: site.home.secMusic },
   { href: "/profile/", en: "Profile", ja: "プロフィール", desc: site.home.secProfile },
   { href: "/research/", en: "Research", ja: "研究", desc: site.home.secResearch },
-].map((block, i) => ({
-  ...block,
-  media: tileMedia.length > 0 ? tileMedia[i % tileMedia.length] : null,
-}));
+];
+
+const blocks = await Promise.all(
+  blockDefs.map(async (block, i) => {
+    const media = tileMedia.length > 0 ? tileMedia[i % tileMedia.length] : null;
+    if (media?.type !== "image") return { ...block, media };
+
+    const [small, medium, large] = await Promise.all([
+      getImage({ src: media.image, width: 720, quality: 100 }),
+      getImage({ src: media.image, width: 1080, quality: 100 }),
+      getImage({ src: media.image, width: 1440, quality: 100 }),
+    ]);
+
+    return {
+      ...block,
+      media: {
+        ...media,
+        optimized: {
+          src: large.src,
+          srcset: `${small.src} 720w, ${medium.src} 1080w, ${large.src} 1440w`,
+          width: 1440,
+          height: Math.round((1440 * media.image.height) / media.image.width),
+        },
+      },
+    };
+  }),
+);
 ---
 
 <Layout title="余白の庭 | Shuichi Tani" wide>
@@ -60,8 +83,12 @@ const blocks = [
               block.media?.type === "image" ? (
                 <img
                   class="block-image"
-                  data-src={block.media.url}
+                  data-src={block.media.optimized.src}
+                  data-srcset={block.media.optimized.srcset}
+                  data-sizes="(max-width: 1024px) calc(100vw - 2rem), 680px"
                   alt=""
+                  width={block.media.optimized.width}
+                  height={block.media.optimized.height}
                   decoding="async"
                 />
               ) : block.media?.type === "video" ? (
@@ -120,12 +147,20 @@ const blocks = [
 </Layout>
 
 <script>
-  // CSS背景は全件を即時取得するため、カード画像は表示直前まで読み込まない。
+  // 表示直前まで取得を待ち、端末幅に合う高画質画像だけを読み込む。
   const loadBlockImage = (image: HTMLImageElement) => {
     const src = image.dataset.src;
     if (!src) return;
+
+    const srcset = image.dataset.srcset;
+    const sizes = image.dataset.sizes;
+    if (srcset) image.srcset = srcset;
+    if (sizes) image.sizes = sizes;
     image.src = src;
+
     delete image.dataset.src;
+    delete image.dataset.srcset;
+    delete image.dataset.sizes;
   };
 
   const blockImages = document.querySelectorAll<HTMLImageElement>(

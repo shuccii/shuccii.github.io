@@ -14,6 +14,11 @@ const photoUrlModules = import.meta.glob<string>(
 );
 
 // src/assets/backgrounds/ の背景専用写真(ギャラリーには表示されない)
+const backgroundImageModules = import.meta.glob<{ default: ImageMetadata }>(
+  "../assets/backgrounds/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}",
+  { eager: true },
+);
+
 const backgroundUrlModules = import.meta.glob<string>(
   "../assets/backgrounds/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}",
   { eager: true, query: "?url", import: "default" },
@@ -73,7 +78,16 @@ export interface BackgroundMedia {
   url: string;
 }
 
-export interface TileMedia extends BackgroundMedia {}
+export type TileMedia =
+  | {
+      type: "image";
+      url: string;
+      image: ImageMetadata;
+    }
+  | {
+      type: "video";
+      url: string;
+    };
 
 // 背景スライドショーは背景専用フォルダ src/assets/backgrounds/ のメディアだけを使う。
 // 投稿した写真・動画は自動では反映されない。背景に使いたいファイルは
@@ -92,14 +106,22 @@ export function getBackgroundMedia(): BackgroundMedia[] {
 // ホームのセクションタイル用。追加した写真・動画も順番に使う。
 export function getTileMedia(): TileMedia[] {
   return [
-    ...Object.values(backgroundUrlModules).map(
-      (url): TileMedia => ({ type: "image", url }),
+    ...Object.entries(backgroundImageModules).map(
+      ([path, mod]): TileMedia => ({
+        type: "image",
+        url: backgroundUrlModules[path],
+        image: mod.default,
+      }),
     ),
     ...Object.values(backgroundVideoModules).map(
       (url): TileMedia => ({ type: "video", url }),
     ),
-    ...Object.values(photoUrlModules).map(
-      (url): TileMedia => ({ type: "image", url }),
+    ...Object.entries(photoModules).map(
+      ([path, mod]): TileMedia => ({
+        type: "image",
+        url: photoUrlModules[path],
+        image: mod.default,
+      }),
     ),
     ...Object.values(videoUrlModules).map(
       (url): TileMedia => ({ type: "video", url }),
