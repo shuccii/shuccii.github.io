@@ -265,7 +265,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           } else {
             const v = document.createElement("video");
             let settled = false;
-            const timeout = window.setTimeout(() => finish(false), 12000);
+            // 高画質動画でも低速回線で先頭フレームを待てるよう余裕を持たせる
+            const timeout = window.setTimeout(() => finish(false), 45000);
             const finish = (ready) => {
               if (settled) return;
               settled = true;
