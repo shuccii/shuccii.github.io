@@ -21,7 +21,7 @@ const backgroundUrlModules = import.meta.glob<string>(
 
 // src/assets/backgrounds/ の背景専用動画(ループ再生される)
 const backgroundVideoModules = import.meta.glob<string>(
-  "../assets/backgrounds/*.{mp4,webm,MP4,WEBM}",
+  "../assets/backgrounds/*.{mp4,webm,mov,MP4,WEBM,MOV}",
   { eager: true, query: "?url", import: "default" },
 );
 
