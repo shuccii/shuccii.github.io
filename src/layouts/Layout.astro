@@ -113,39 +113,37 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           </ul>
         </nav>
       </div>
+      <nav class="mobile-nav glass" aria-label="モバイルナビゲーション">
+        <ul>
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class:list={{
+                    active:
+                      item.href === "/"
+                        ? current === "/"
+                        : current.startsWith(item.href),
+                  }}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+          <li>
+            <a
+              href="https://github.com/shuccii"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GITHUB ↗
+            </a>
+          </li>
+        </ul>
+      </nav>
     </header>
-
-    <!-- iOS Safariでfixed配置がヘッダーのbackdrop-filterに拘束されないよう外へ分離 -->
-    <nav class="mobile-nav glass" aria-label="モバイルナビゲーション">
-      <ul>
-        {
-          nav.map((item) => (
-            <li>
-              <a
-                href={item.href}
-                class:list={{
-                  active:
-                    item.href === "/"
-                      ? current === "/"
-                      : current.startsWith(item.href),
-                }}
-              >
-                {item.label}
-              </a>
-            </li>
-          ))
-        }
-        <li>
-          <a
-            href="https://github.com/shuccii"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            GITHUB ↗
-          </a>
-        </li>
-      </ul>
-    </nav>
 
     <main class:list={["container", { wide }]}>
       <slot />
@@ -1678,7 +1676,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
     main.container {
       padding-top: 1.8rem;
-      padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
+      padding-bottom: 5rem;
     }
 
     h1 {
@@ -1710,20 +1708,21 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       display: none;
     }
 
-    /* モバイルではヘッダーをstickyにせず、ページ末尾で覗かないようにする */
+    /* モバイルではヘッダーをstickyにせず、タイトル直下にナビを置く */
     .site-header {
       position: relative;
     }
 
     .mobile-nav {
       display: block;
-      position: fixed;
+      position: relative;
       top: auto;
-      right: 0.55rem;
-      bottom: max(0.5rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
-      left: 0.55rem;
-      z-index: 40;
-      width: auto;
+      right: auto;
+      bottom: auto;
+      left: auto;
+      z-index: 1;
+      width: calc(100% - 1.1rem);
+      margin: 0.1rem auto 0.85rem;
       overflow-x: auto;
       padding: 0.68rem 0.72rem;
       background:
@@ -1811,8 +1810,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     .site-footer {
-      margin-bottom: 6rem;
-      margin-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+      margin-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     #content-editor textarea {
