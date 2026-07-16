@@ -208,6 +208,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         ];
         let showing = 0;
         let lastIndex = -1;
+        let firstSwap = true;
+        let firstDisplay = true;
 
         const applyBackgroundTone = (brightness) => {
           const dark = brightness < 138;
@@ -242,6 +244,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         };
 
         const pick = () => {
+          if (firstSwap) {
+            firstSwap = false;
+            const initial = bgMedia.findIndex(
+              (media) =>
+                media.type === "image" && media.url.includes("bg-city-dusk"),
+            );
+            if (initial >= 0) return initial;
+          }
           if (bgMedia.length === 1) return 0;
           let i;
           do {
@@ -320,7 +330,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               showing = 1 - showing;
               if (bgMedia.length > 1) {
                 // 動画は長め、写真は9秒で次へ
-                const wait = bgMedia[i].type === "video" ? 22000 : 9000;
+                const wait = firstDisplay
+                  ? 15000
+                  : bgMedia[i].type === "video"
+                    ? 22000
+                    : 9000;
+                firstDisplay = false;
                 setTimeout(swap, wait);
               }
             },
@@ -420,7 +435,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       // スクロールに合わせて要素をふわっと表示する
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
         const targets = document.querySelectorAll(
-          "main > *:not(.blocks), .blocks > .block, .gallery figure, .video-list figure",
+          "main > *:not(.blocks):not(.hero), .blocks > .block, .gallery figure, .video-list figure",
         );
         const io = new IntersectionObserver(
           (entries) => {
