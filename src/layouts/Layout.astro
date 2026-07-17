@@ -243,12 +243,18 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         };
 
         const pick = () => {
-          if (bgMedia.length === 1) return 0;
-          let i;
-          do {
-            i = Math.floor(Math.random() * bgMedia.length);
-          } while (i === lastIndex);
-          return i;
+          // 初回だけは軽い写真からランダムに選ぶ。
+          // 2回目以降は動画を含む全候補へ戻し、背景の変化は維持する。
+          const candidates = bgMedia
+            .map((media, index) => ({ media, index }))
+            .filter(
+              ({ media, index }) =>
+                index !== lastIndex && (!firstDisplay || media.type === "image"),
+            );
+          const pool = candidates.length > 0
+            ? candidates
+            : bgMedia.map((media, index) => ({ media, index }));
+          return pool[Math.floor(Math.random() * pool.length)].index;
         };
 
         const setMedia = (layer, media, onReady, onFailure) => {
