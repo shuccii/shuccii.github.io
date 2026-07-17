@@ -39,6 +39,29 @@ const videoUrlModules = import.meta.glob<string>(
 const fileName = (path: string) => path.split("/").pop() ?? "";
 const baseName = (path: string) => fileName(path).replace(/\.[^.]+$/, "");
 
+// 背景の32x32平均輝度。ブラウザで元写真をCanvas解析せず、
+// 同じ明暗判定を即座に適用できるようビルド前に算出した値。
+const backgroundBrightness: Record<string, number> = {
+  "B295D987-B2E4-4964-98C0-3C190BE1A497.jpeg": 168.42,
+  "IMG_0536.jpeg": 75.31,
+  "IMG_1400.JPG": 105.33,
+  "IMG_2672.JPG": 69.34,
+  "IMG_2943.JPG": 132.69,
+  "IMG_3379.jpeg": 54.56,
+  "IMG_9900.jpeg": 45.45,
+  "_DSC0031.jpeg": 181.07,
+  "_DSC0221.jpeg": 141.79,
+  "_DSC0235.jpeg": 146.51,
+  "_DSC0380_045.JPG": 106.34,
+  "_DSC0384_048.JPG": 181.09,
+  "_DSC0621.jpeg": 106.08,
+  "_DSC0793.jpeg": 111.67,
+  "_DSC0965.jpeg": 72.24,
+  "_DSC0985.jpeg": 136.82,
+  "bg-city-dusk.jpg": 179.58,
+  "bg-rainbow-bridge.jpg": 99.76,
+};
+
 export interface PhotoItem {
   file: string; // 拡張子付きファイル名(ブログ frontmatter との照合キー)
   name: string; // 拡張子なし(キャプション)
@@ -73,10 +96,17 @@ export function getVideos(): VideoItem[] {
     .sort((a, b) => b.name.localeCompare(a.name));
 }
 
-export interface BackgroundMedia {
-  type: "image" | "video";
-  url: string;
-}
+export type BackgroundMedia =
+  | {
+      type: "image";
+      url: string;
+      image: ImageMetadata;
+      brightness: number;
+    }
+  | {
+      type: "video";
+      url: string;
+    };
 
 export type TileMedia =
   | {
@@ -94,8 +124,13 @@ export type TileMedia =
 // backgrounds/ フォルダへ手動でコピーして追加する。
 export function getBackgroundMedia(): BackgroundMedia[] {
   return [
-    ...Object.values(backgroundUrlModules).map(
-      (url): BackgroundMedia => ({ type: "image", url }),
+    ...Object.entries(backgroundImageModules).map(
+      ([path, mod]): BackgroundMedia => ({
+        type: "image",
+        url: backgroundUrlModules[path],
+        image: mod.default,
+        brightness: backgroundBrightness[fileName(path)] ?? 150,
+      }),
     ),
     ...Object.values(backgroundVideoModules).map(
       (url): BackgroundMedia => ({ type: "video", url }),

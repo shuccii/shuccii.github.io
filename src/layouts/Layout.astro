@@ -1,5 +1,6 @@
 ---
 import { getBackgroundMedia } from "../lib/media";
+import { getImage } from "astro:assets";
 import site from "../data/site.json";
 
 interface Props {
@@ -22,7 +23,25 @@ const nav = [
 ];
 
 const current = Astro.url.pathname;
-const bgMedia = getBackgroundMedia();
+const bgMedia = await Promise.all(
+  getBackgroundMedia().map(async (media) => {
+    if (media.type !== "image") return media;
+
+    // 元写真の画質は100のまま、背景表示に十分な解像度へ変換する。
+    // モバイルでも縦画面の cover 表示で解像感を落とさないよう1920pxを確保する。
+    const [mobile, desktop] = await Promise.all([
+      getImage({ src: media.image, width: 1920, quality: 100 }),
+      getImage({ src: media.image, width: 2880, quality: 100 }),
+    ]);
+
+    return {
+      type: "image" as const,
+      url: desktop.src,
+      mobileUrl: mobile.src,
+      brightness: media.brightness,
+    };
+  }),
+);
 
 // SNSリンク: site.json の sns にURLを入れると表示される(編集モードで後付け可能)
 const snsDefs = [
@@ -263,12 +282,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           if (media.type === "image") {
             const img = new Image();
             img.onload = () => {
-              layer.style.backgroundImage = `url("${media.url}")`;
-              applyBackgroundTone(brightnessFromElement(img));
+              layer.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
+              applyBackgroundTone(media.brightness);
               onReady();
             };
             img.onerror = onFailure;
-            img.src = media.url;
+            img.src = matchMedia("(max-width: 1024px)").matches
+              ? media.mobileUrl
+              : media.url;
           } else {
             const v = document.createElement("video");
             let settled = false;

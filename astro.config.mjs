@@ -66,7 +66,15 @@ function editApi() {
 
 export default defineConfig({
   site: "https://shuccii.github.io",
+  build: {
+    // 小さな共通CSSはHTMLへ含め、初期表示時の2本の待ち時間をなくす。
+    inlineStylesheets: "always",
+  },
   vite: {
     plugins: [editApi()],
+    build: {
+      // 標準版とSafari版のbackdrop-filterを両方残す。
+      cssMinify: "esbuild",
+    },
   },
 });
