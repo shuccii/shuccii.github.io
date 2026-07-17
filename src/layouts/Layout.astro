@@ -208,7 +208,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         ];
         let showing = 0;
         let lastIndex = -1;
-        let firstSwap = true;
         let firstDisplay = true;
 
         const applyBackgroundTone = (brightness) => {
@@ -244,14 +243,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         };
 
         const pick = () => {
-          if (firstSwap) {
-            firstSwap = false;
-            const initial = bgMedia.findIndex(
-              (media) =>
-                media.type === "image" && media.url.includes("bg-city-dusk"),
-            );
-            if (initial >= 0) return initial;
-          }
           if (bgMedia.length === 1) return 0;
           let i;
           do {
