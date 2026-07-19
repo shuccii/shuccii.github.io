@@ -34,7 +34,7 @@ const {
   <ul class="comment-rules">
     <li>相手を尊重し、記事の内容に関係する意見を投稿してください。</li>
     <li>個人情報、差別・脅迫、誹謗中傷、宣伝や連投は禁止です。</li>
-    <li>投稿は承認後に公開されます。禁止語やスパムは保存前にも検査します。</li>
+    <li>投稿は送信後すぐに公開されます。禁止語やスパムは保存前に検査します。</li>
   </ul>
 
   <form class="comment-form" data-comment-form>
@@ -295,7 +295,8 @@ const {
         textarea.value = "";
         if (count) count.textContent = "0 / 1000";
         clearReply();
-        status.textContent = "送信しました。内容を確認後、このページに公開します。";
+        await loadComments();
+        status.textContent = "送信しました。コメント欄に反映しました。";
       } catch (error) {
         status.textContent =
           error instanceof Error ? error.message : "送信できませんでした。";

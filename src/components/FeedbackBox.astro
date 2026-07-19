@@ -105,6 +105,10 @@
           const detail = await response.json().catch(() => ({}));
           throw new Error(detail.message || "送信に失敗しました");
         }
+        const submissionId = await response.json();
+        if (typeof submissionId !== "string" || !submissionId) {
+          throw new Error("保存結果を確認できませんでした。もう一度お試しください");
+        }
         form.reset();
         category.value = "other";
         textarea.dataset.templateApplied = "false";
@@ -114,7 +118,7 @@
           card.setAttribute("aria-pressed", "false");
         });
         status.className = "form-status success";
-        status.textContent = "送信しました。大切に読ませていただきます。";
+        status.textContent = `送信しました。受付番号: ${submissionId.slice(0, 8)}`;
       } catch (error) {
         status.className = "form-status error";
         status.textContent = error instanceof Error ? error.message : "送信に失敗しました";

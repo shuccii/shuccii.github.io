@@ -9,7 +9,7 @@ create table if not exists public.site_comments (
   author_name text not null,
   body text not null,
   parent_id uuid references public.site_comments(id) on delete cascade,
-  status text not null default 'pending'
+  status text not null default 'approved'
     check (status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now()
 );
@@ -125,13 +125,15 @@ begin
     page_id,
     author_name,
     body,
-    parent_id
+    parent_id,
+    status
   )
   values (
     p_page_id,
     trim(p_author_name),
     trim(p_body),
-    p_parent_id
+    p_parent_id,
+    'approved'
   )
   returning id into new_id;
 
