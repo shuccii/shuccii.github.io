@@ -1,11 +1,11 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import CommentSection from "../components/CommentSection.astro";
+import FeedbackBox from "../components/FeedbackBox.astro";
 ---
 
 <Layout
   title="意見ボックス | Shuichi Tani"
-  description="余白の庭への感想、改善案、取り上げてほしいテーマを送るための意見ボックスです。"
+  description="余白の庭への感想、改善案、取り上げてほしいテーマを非公開で送るための意見ボックスです。"
 >
   <header class="feedback-header">
     <p class="eyebrow">VOICE</p>
@@ -17,29 +17,65 @@ import CommentSection from "../components/CommentSection.astro";
   </header>
 
   <div class="feedback-cards">
-    <section class="glass">
+    <button
+      class="glass"
+      type="button"
+      data-feedback-template="improvement"
+      data-template={"【改善してほしいところ】\n\n【困っていること】\n\n【こうなるとうれしい】\n"}
+      aria-pressed="false"
+    >
       <span aria-hidden="true">💡</span>
       <h2>改善のアイデア</h2>
       <p>見づらい場所や、追加してほしい機能を教えてください。</p>
-    </section>
-    <section class="glass">
+      <small>このテンプレートを使う →</small>
+    </button>
+    <button
+      class="glass"
+      type="button"
+      data-feedback-template="topic"
+      data-template={"【読みたいテーマ】\n\n【気になっていること】\n\n【どんな内容だとうれしいか】\n"}
+      aria-pressed="false"
+    >
       <span aria-hidden="true">📝</span>
       <h2>読みたいテーマ</h2>
       <p>研究・写真・日々の記録など、今後読みたい内容を送れます。</p>
-    </section>
-    <section class="glass">
+      <small>このテンプレートを使う →</small>
+    </button>
+    <button
+      class="glass"
+      type="button"
+      data-feedback-template="impression"
+      data-template={"【ひとこと感想】\n\n【特に印象に残ったところ】\n"}
+      aria-pressed="false"
+    >
       <span aria-hidden="true">🌱</span>
       <h2>ひとこと感想</h2>
-      <p>短い感想も歓迎です。ほかの人の意見には 👍 で反応できます。</p>
-    </section>
+      <p>短い感想も歓迎です。送った内容はサイトには公開されません。</p>
+      <small>このテンプレートを使う →</small>
+    </button>
   </div>
 
-  <CommentSection
-    heading="みんなの意見"
-    intro="名前と意見だけで送れます。アカウント登録は不要で、ほかの人も返信や 👍 ができます。"
-    pageId="site-feedback"
-  />
+  <FeedbackBox />
 </Layout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-feedback-template]").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll("[data-feedback-template]").forEach((item) => {
+        item.classList.remove("is-selected");
+        item.setAttribute("aria-pressed", "false");
+      });
+      card.classList.add("is-selected");
+      card.setAttribute("aria-pressed", "true");
+      window.dispatchEvent(new CustomEvent("feedback-template-selected", {
+        detail: {
+          category: card.dataset.feedbackTemplate,
+          template: card.dataset.template,
+        },
+      }));
+    });
+  });
+</script>
 
 <style>
   .feedback-header {
@@ -47,7 +83,6 @@ import CommentSection from "../components/CommentSection.astro";
     margin: 0 auto 2rem;
     text-align: center;
   }
-
   .eyebrow {
     margin: 0;
     color: var(--text-muted);
@@ -55,46 +90,73 @@ import CommentSection from "../components/CommentSection.astro";
     font-weight: 700;
     letter-spacing: 0.2em;
   }
-
-  .feedback-header h1 {
-    margin: 0.3rem 0 0.8rem;
-  }
-
-  .lead {
-    color: var(--text-muted);
-    line-height: 1.9;
-  }
-
+  .feedback-header h1 { margin: 0.3rem 0 0.8rem; }
+  .lead { color: var(--text-muted); line-height: 1.9; }
   .feedback-cards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
   }
-
-  .feedback-cards section {
+  .feedback-cards button {
     --glass-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.42);
     padding: 1.15rem;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
   }
-
-  .feedback-cards span {
-    font-size: 1.5rem;
+  .feedback-cards button::before {
+    content: "";
+    position: absolute;
+    inset: -100% 45% -100% -65%;
+    transform: rotate(16deg) translateX(-70%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.56), transparent);
+    transition: transform 520ms ease;
+    pointer-events: none;
   }
-
-  .feedback-cards h2 {
-    margin: 0.55rem 0 0.35rem;
-    font-size: 1rem;
+  .feedback-cards button:hover,
+  .feedback-cards button:focus-visible {
+    transform: translateY(-6px);
+    border-color: rgba(104, 151, 115, 0.5);
+    box-shadow: 0 16px 32px rgba(54, 85, 62, 0.16);
   }
-
+  .feedback-cards button:hover::before,
+  .feedback-cards button:focus-visible::before {
+    transform: rotate(16deg) translateX(250%);
+  }
+  .feedback-cards button.is-selected {
+    transform: translateY(-6px) scale(1.015);
+    border-color: rgba(75, 130, 88, 0.7);
+    box-shadow: 0 0 0 4px rgba(114, 164, 126, 0.13), 0 18px 36px rgba(54, 85, 62, 0.18);
+    animation: selected-pulse 420ms ease;
+  }
+  .feedback-cards span { font-size: 1.5rem; }
+  .feedback-cards h2 { margin: 0.55rem 0 0.35rem; font-size: 1rem; }
   .feedback-cards p {
     margin: 0;
     color: var(--text-muted);
     font-size: 0.88rem;
     line-height: 1.7;
   }
-
+  .feedback-cards small {
+    display: inline-block;
+    margin-top: 0.9rem;
+    color: #42654b;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  @keyframes selected-pulse {
+    50% { transform: translateY(-6px) scale(1.035); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .feedback-cards button, .feedback-cards button::before { transition: none; }
+    .feedback-cards button.is-selected { animation: none; }
+  }
   @media (max-width: 680px) {
-    .feedback-cards {
-      grid-template-columns: 1fr;
-    }
+    .feedback-cards { grid-template-columns: 1fr; }
   }
 </style>

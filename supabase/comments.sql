@@ -56,7 +56,8 @@ as $$
     c.parent_id,
     c.created_at
   from public.site_comments as c
-  where c.page_id = p_page_id
+  where p_page_id ~ '^blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+$'
+    and c.page_id = p_page_id
     and c.status = 'approved'
   order by c.created_at asc;
 $$;
@@ -84,7 +85,7 @@ declare
   ];
   blocked_term text;
 begin
-  if p_page_id !~ '^(blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+|site-feedback)$' then
+  if p_page_id !~ '^blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+$' then
     raise exception 'このページには投稿できません';
   end if;
 
@@ -152,7 +153,8 @@ as $$
     count(*)::bigint,
     bool_or(l.voter_key = p_voter_key)
   from public.site_likes as l
-  where l.page_id = p_page_id;
+  where p_page_id ~ '^blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+$'
+    and l.page_id = p_page_id;
 $$;
 
 create or replace function public.toggle_site_like(
@@ -167,7 +169,7 @@ as $$
 declare
   is_liked boolean;
 begin
-  if p_page_id !~ '^(blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+|site-feedback)$' then
+  if p_page_id !~ '^blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+$' then
     raise exception 'このページにはGOODできません';
   end if;
 

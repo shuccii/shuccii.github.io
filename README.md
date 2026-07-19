@@ -48,16 +48,19 @@ PATは次の条件で作成してください。
 - 対応形式: jpg / jpeg / png / webp(画像)、mp4 / webm(動画)
 - ファイルを削除すれば背景からも消えます
 
-## コメント・いいね・意見ボックス
+## コメント・いいね・非公開の意見ボックス
 
-ブログ記事の末尾と `/feedback/` には、Supabaseを使ったコメント欄があります。
+ブログ記事の末尾には、Supabaseを使ったコメント欄があります。
 閲覧・投稿・返信・👍にログインは不要です。コメントは承認待ちで保存され、
 Supabaseの `site_comments` テーブルで `status` を `approved` にすると公開されます。
+
+`/feedback/` は公開コメントとは別の非公開フォームです。アカウント登録なしで送信できますが、
+内容はサイトに表示されず、管理者だけがSupabase Dashboardで確認できます。
 
 初回設定:
 
 1. Supabaseでプロジェクトを作成する
-2. DashboardのSQL Editorで `supabase/comments.sql` を実行する
+2. DashboardのSQL Editorで `supabase/comments.sql` と `supabase/private-feedback.sql` を順に実行する
 3. `.env` に次を設定する
 
 ```env
@@ -73,6 +76,13 @@ PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 Supabase DashboardのTable Editorで `site_comments` を開き、内容を確認して
 `status` を `pending` から `approved` に変更します。不適切な投稿は
 `rejected` に変更するか削除してください。
+
+### 非公開の意見を確認する
+
+Supabase DashboardのTable Editorで `site_feedback` を開きます。確認済みの意見は
+`status` を `new` から `read` に変更できます。ブラウザ用の公開キーには
+このテーブルの読み取り権限を付与していません。
+送信はブラウザ単位で1時間5件までに制限し、識別子はハッシュ化して保存します。
 
 ## ビルド
 
