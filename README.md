@@ -48,6 +48,32 @@ PATは次の条件で作成してください。
 - 対応形式: jpg / jpeg / png / webp(画像)、mp4 / webm(動画)
 - ファイルを削除すれば背景からも消えます
 
+## コメント・いいね・意見ボックス
+
+ブログ記事の末尾と `/feedback/` には、Supabaseを使ったコメント欄があります。
+閲覧・投稿・返信・👍にログインは不要です。コメントは承認待ちで保存され、
+Supabaseの `site_comments` テーブルで `status` を `approved` にすると公開されます。
+
+初回設定:
+
+1. Supabaseでプロジェクトを作成する
+2. DashboardのSQL Editorで `supabase/comments.sql` を実行する
+3. `.env` に次を設定する
+
+```env
+PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+公開環境にも同じ2項目を設定してビルドしてください。`service_role` キーは
+ブラウザやGitHubリポジトリへ絶対に置かないでください。
+
+### コメントの承認
+
+Supabase DashboardのTable Editorで `site_comments` を開き、内容を確認して
+`status` を `pending` から `approved` に変更します。不適切な投稿は
+`rejected` に変更するか削除してください。
+
 ## ビルド
 
 ```sh

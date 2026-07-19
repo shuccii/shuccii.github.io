@@ -1,0 +1,566 @@
+---
+interface Props {
+  heading?: string;
+  intro?: string;
+  pageId?: string;
+}
+
+const {
+  heading = "コメント",
+  intro = "名前とコメントだけで投稿できます。アカウント登録は不要です。",
+  pageId = Astro.url.pathname.replace(/^\/|\/$/g, ""),
+} = Astro.props;
+---
+
+<section
+  class="comment-section glass"
+  aria-labelledby="comment-heading"
+  data-comment-section
+  data-page-id={pageId}
+>
+  <div class="comment-heading">
+    <div>
+      <p class="eyebrow">COMMUNITY</p>
+      <h2 id="comment-heading">{heading}</h2>
+    </div>
+    <button class="good-button" type="button" data-like-button disabled>
+      <span aria-hidden="true">👍</span>
+      <span>GOOD</span>
+      <span class="good-count" data-like-count>–</span>
+    </button>
+  </div>
+
+  <p class="comment-intro">{intro}</p>
+  <ul class="comment-rules">
+    <li>相手を尊重し、記事の内容に関係する意見を投稿してください。</li>
+    <li>個人情報、差別・脅迫、誹謗中傷、宣伝や連投は禁止です。</li>
+    <li>投稿は承認後に公開されます。禁止語やスパムは保存前にも検査します。</li>
+  </ul>
+
+  <form class="comment-form" data-comment-form>
+    <input
+      class="honeypot"
+      type="text"
+      name="website"
+      tabindex="-1"
+      autocomplete="off"
+      aria-hidden="true"
+    />
+    <label>
+      <span>お名前</span>
+      <input
+        type="text"
+        name="author"
+        maxlength="40"
+        autocomplete="nickname"
+        placeholder="ニックネームでもOK"
+        required
+      />
+    </label>
+    <label>
+      <span data-body-label>コメント</span>
+      <textarea
+        name="body"
+        maxlength="1000"
+        rows="5"
+        placeholder="コメントを入力してください"
+        required
+      ></textarea>
+    </label>
+    <input type="hidden" name="parentId" value="" />
+    <div class="replying" data-replying hidden>
+      <span data-replying-text></span>
+      <button type="button" data-cancel-reply>返信をやめる</button>
+    </div>
+    <div class="form-footer">
+      <span class="character-count" data-character-count>0 / 1000</span>
+      <button class="submit-button" type="submit" disabled>送信する</button>
+    </div>
+    <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+  </form>
+
+  <div class="comments-toolbar">
+    <h3>みんなのコメント</h3>
+    <span data-comment-count>読み込み中…</span>
+  </div>
+  <div class="comments-list" data-comments-list aria-live="polite"></div>
+  <p class="setup-notice" data-setup-notice hidden>
+    コメント機能の接続設定がまだ完了していません。
+  </p>
+</section>
+
+<script>
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_KEY =
+    import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+
+  const callRpc = async (name: string, body: Record<string, unknown>) => {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw new Error(detail.message || "通信に失敗しました");
+    }
+    return response.status === 204 ? null : response.json();
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-comment-section]").forEach((section) => {
+    const pageId = section.dataset.pageId || "";
+    const form = section.querySelector<HTMLFormElement>("[data-comment-form]");
+    const list = section.querySelector<HTMLElement>("[data-comments-list]");
+    const status = section.querySelector<HTMLElement>("[data-form-status]");
+    const submit = section.querySelector<HTMLButtonElement>(".submit-button");
+    const textarea = section.querySelector<HTMLTextAreaElement>('textarea[name="body"]');
+    const author = section.querySelector<HTMLInputElement>('input[name="author"]');
+    const parentInput = section.querySelector<HTMLInputElement>('input[name="parentId"]');
+    const count = section.querySelector<HTMLElement>("[data-character-count]");
+    const commentCount = section.querySelector<HTMLElement>("[data-comment-count]");
+    const likeButton = section.querySelector<HTMLButtonElement>("[data-like-button]");
+    const likeCount = section.querySelector<HTMLElement>("[data-like-count]");
+    const replying = section.querySelector<HTMLElement>("[data-replying]");
+    const replyingText = section.querySelector<HTMLElement>("[data-replying-text]");
+    const setupNotice = section.querySelector<HTMLElement>("[data-setup-notice]");
+
+    if (!form || !list || !status || !submit || !textarea || !author || !parentInput) return;
+
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      setupNotice?.removeAttribute("hidden");
+      list.innerHTML = "";
+      if (commentCount) commentCount.textContent = "準備中";
+      return;
+    }
+
+    submit.disabled = false;
+    if (likeButton) likeButton.disabled = false;
+    author.value = localStorage.getItem("comment-author-name") || "";
+
+    let voterKey = localStorage.getItem("site-like-voter-key");
+    if (!voterKey) {
+      voterKey = crypto.randomUUID();
+      localStorage.setItem("site-like-voter-key", voterKey);
+    }
+
+    const clearReply = () => {
+      parentInput.value = "";
+      replying?.setAttribute("hidden", "");
+      if (replyingText) replyingText.textContent = "";
+    };
+
+    const loadLikes = async () => {
+      if (!likeButton || !likeCount) return;
+      try {
+        const result = await callRpc("get_site_like_state", {
+          p_page_id: pageId,
+          p_voter_key: voterKey,
+        });
+        const state = Array.isArray(result) ? result[0] : result;
+        likeCount.textContent = String(state?.like_count ?? 0);
+        likeButton.classList.toggle("liked", Boolean(state?.liked));
+        likeButton.setAttribute("aria-pressed", String(Boolean(state?.liked)));
+      } catch {
+        likeCount.textContent = "–";
+      }
+    };
+
+    const loadComments = async () => {
+      list.replaceChildren();
+      try {
+        const comments = await callRpc("get_site_comments", { p_page_id: pageId });
+        const rows = Array.isArray(comments) ? comments : [];
+        if (commentCount) commentCount.textContent = `${rows.length}件`;
+
+        if (rows.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "comments-empty";
+          empty.textContent = "まだコメントはありません。最初のコメントをどうぞ。";
+          list.append(empty);
+          return;
+        }
+
+        const roots = rows.filter((row) => !row.parent_id);
+        const replies = new Map<string, typeof rows>();
+        rows.filter((row) => row.parent_id).forEach((row) => {
+          const current = replies.get(row.parent_id) || [];
+          current.push(row);
+          replies.set(row.parent_id, current);
+        });
+
+        const renderComment = (row, isReply = false) => {
+          const article = document.createElement("article");
+          article.className = isReply ? "comment comment-reply" : "comment";
+
+          const avatar = document.createElement("span");
+          avatar.className = "comment-avatar";
+          avatar.textContent = row.author_name.trim().charAt(0).toUpperCase() || "匿";
+          avatar.setAttribute("aria-hidden", "true");
+
+          const content = document.createElement("div");
+          content.className = "comment-content";
+
+          const meta = document.createElement("div");
+          meta.className = "comment-meta";
+          const name = document.createElement("strong");
+          name.textContent = row.author_name;
+          const time = document.createElement("time");
+          time.dateTime = row.created_at;
+          time.textContent = formatDate(row.created_at);
+          meta.append(name, time);
+
+          const body = document.createElement("p");
+          body.className = "comment-body";
+          body.textContent = row.body;
+
+          const reply = document.createElement("button");
+          reply.type = "button";
+          reply.className = "reply-button";
+          reply.textContent = "返信";
+          reply.addEventListener("click", () => {
+            parentInput.value = row.id;
+            if (replyingText) replyingText.textContent = `${row.author_name}さんへ返信中`;
+            replying?.removeAttribute("hidden");
+            textarea.focus();
+          });
+
+          content.append(meta, body, reply);
+          article.append(avatar, content);
+          list.append(article);
+
+          (replies.get(row.id) || []).forEach((child) => renderComment(child, true));
+        };
+
+        roots.forEach((row) => renderComment(row));
+      } catch {
+        if (commentCount) commentCount.textContent = "取得できませんでした";
+        const error = document.createElement("p");
+        error.className = "comments-empty";
+        error.textContent = "コメントを読み込めませんでした。時間をおいて再度お試しください。";
+        list.append(error);
+      }
+    };
+
+    textarea.addEventListener("input", () => {
+      if (count) count.textContent = `${textarea.value.length} / 1000`;
+    });
+
+    section.querySelector("[data-cancel-reply]")?.addEventListener("click", clearReply);
+
+    likeButton?.addEventListener("click", async () => {
+      likeButton.disabled = true;
+      try {
+        const result = await callRpc("toggle_site_like", {
+          p_page_id: pageId,
+          p_voter_key: voterKey,
+        });
+        const state = Array.isArray(result) ? result[0] : result;
+        if (likeCount) likeCount.textContent = String(state?.like_count ?? 0);
+        likeButton.classList.toggle("liked", Boolean(state?.liked));
+        likeButton.setAttribute("aria-pressed", String(Boolean(state?.liked)));
+      } finally {
+        likeButton.disabled = false;
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      if (String(data.get("website") || "")) return;
+
+      submit.disabled = true;
+      status.textContent = "送信しています…";
+      try {
+        await callRpc("submit_site_comment", {
+          p_page_id: pageId,
+          p_author_name: String(data.get("author") || ""),
+          p_body: String(data.get("body") || ""),
+          p_parent_id: parentInput.value || null,
+        });
+        localStorage.setItem("comment-author-name", author.value.trim());
+        textarea.value = "";
+        if (count) count.textContent = "0 / 1000";
+        clearReply();
+        status.textContent = "送信しました。内容を確認後、このページに公開します。";
+      } catch (error) {
+        status.textContent =
+          error instanceof Error ? error.message : "送信できませんでした。";
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    void Promise.all([loadComments(), loadLikes()]);
+  });
+</script>
+
+<style>
+  .comment-section {
+    --glass-radius: 18px;
+    margin-top: 3rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
+  }
+
+  .comment-heading,
+  .form-footer,
+  .comments-toolbar,
+  .comment-meta,
+  .replying {
+    display: flex;
+    align-items: center;
+  }
+
+  .comment-heading,
+  .form-footer,
+  .comments-toolbar {
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .eyebrow {
+    margin: 0 0 0.15rem;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+  }
+
+  h2 {
+    margin: 0;
+  }
+
+  .good-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.5rem 0.75rem;
+    color: inherit;
+    background: rgb(255 255 255 / 0.6);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .good-button.liked {
+    color: #1557a0;
+    border-color: rgb(30 90 168 / 0.4);
+    background: rgb(224 239 255 / 0.86);
+  }
+
+  .good-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .good-count {
+    min-width: 1.2em;
+  }
+
+  .comment-intro {
+    margin: 0.9rem 0 0.55rem;
+  }
+
+  .comment-rules {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.75;
+  }
+
+  .comment-form {
+    margin-top: 1.2rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgb(255 255 255 / 0.7);
+  }
+
+  .comment-form label {
+    display: block;
+    margin-bottom: 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .comment-form input,
+  .comment-form textarea {
+    display: block;
+    width: 100%;
+    margin-top: 0.3rem;
+    border: 1px solid rgb(55 65 81 / 0.22);
+    border-radius: 9px;
+    padding: 0.65rem 0.75rem;
+    color: #1f2937;
+    background: rgb(255 255 255 / 0.88);
+    font: inherit;
+    line-height: 1.6;
+  }
+
+  .comment-form textarea {
+    resize: vertical;
+  }
+
+  .honeypot {
+    position: absolute !important;
+    left: -10000px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+  }
+
+  .replying {
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    background: rgb(225 240 255 / 0.72);
+    font-size: 0.76rem;
+  }
+
+  .replying[hidden] {
+    display: none;
+  }
+
+  .replying button,
+  .reply-button {
+    border: 0;
+    color: var(--accent);
+    background: transparent;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .character-count,
+  .comments-toolbar span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  .submit-button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.55rem 1rem;
+    color: white;
+    background: #1e5aa8;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .submit-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+  }
+
+  .form-status {
+    min-height: 1.5em;
+    margin: 0.55rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  .comments-toolbar {
+    margin-top: 1.5rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comments-toolbar h3 {
+    font-size: 0.9rem;
+  }
+
+  .comment-section :global(.comment) {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgb(255 255 255 / 0.48);
+  }
+
+  .comment-section :global(.comment-reply) {
+    margin-left: 3.25rem;
+  }
+
+  .comment-section :global(.comment-avatar) {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    color: #24435f;
+    background: linear-gradient(135deg, #dcefff, #f2e7ff);
+    font-weight: 700;
+  }
+
+  .comment-section :global(.comment-meta) {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    line-height: 1.5;
+  }
+
+  .comment-section :global(.comment-meta strong) {
+    font-size: 0.84rem;
+  }
+
+  .comment-section :global(.comment-meta time) {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .comment-section :global(.comment-body) {
+    margin: 0.35rem 0 0.25rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.88rem;
+    line-height: 1.75;
+  }
+
+  .comment-section :global(.reply-button) {
+    padding: 0;
+    font-size: 0.74rem;
+  }
+
+  .comment-section :global(.comments-empty),
+  .setup-notice {
+    margin: 1rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+  }
+
+  @media (max-width: 520px) {
+    .comment-heading {
+      align-items: flex-start;
+    }
+
+    .good-button {
+      padding: 0.45rem 0.6rem;
+      font-size: 0.68rem;
+    }
+
+    .comment-section :global(.comment-reply) {
+      margin-left: 1.5rem;
+    }
+  }
+</style>

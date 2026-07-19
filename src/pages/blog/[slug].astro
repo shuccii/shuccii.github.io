@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import CommentSection from "../../components/CommentSection.astro";
 import { getCollection, render } from "astro:content";
 import { Image } from "astro:assets";
 import { getPhotos, getVideos } from "../../lib/media";
@@ -98,6 +99,8 @@ const postVideos = post.data.videos
     <button id="post-lightbox-close" type="button" aria-label="閉じる">×</button>
     <img id="post-lightbox-image" alt="" />
   </dialog>
+
+  <CommentSection />
 
   <p class="back"><a href="/blog/">← 記事一覧に戻る</a></p>
 </Layout>

@@ -19,6 +19,7 @@ const nav = [
   { href: "/music/", label: "MUSIC" },
   { href: "/profile/", label: "PROFILE" },
   { href: "/research/", label: "RESEARCH" },
+  { href: "/feedback/", label: "VOICE" },
   { href: "/search/", label: "SEARCH" },
 ];
 
@@ -993,6 +994,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     flex-direction: column;
     min-height: 100vh;
     overflow-x: hidden;
+  }
+
+  /* 横スクロール式ナビがflex本体の最小幅を押し広げないようにする */
+  body > .site-header,
+  body > main,
+  body > .site-footer {
+    width: 100%;
+    min-width: 0;
   }
 
   /* 写真・動画背景(ゆっくりズームするKen Burnsエフェクト付き) */

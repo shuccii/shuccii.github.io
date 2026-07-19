@@ -1,0 +1,100 @@
+---
+import Layout from "../layouts/Layout.astro";
+import CommentSection from "../components/CommentSection.astro";
+---
+
+<Layout
+  title="意見ボックス | Shuichi Tani"
+  description="余白の庭への感想、改善案、取り上げてほしいテーマを送るための意見ボックスです。"
+>
+  <header class="feedback-header">
+    <p class="eyebrow">VOICE</p>
+    <h1>意見ボックス</h1>
+    <p class="lead">
+      サイトの感想、改善してほしいところ、ブログで取り上げてほしいテーマを気軽に送ってください。
+      いただいた意見は、よりよい「余白の庭」を育てるために使います。
+    </p>
+  </header>
+
+  <div class="feedback-cards">
+    <section class="glass">
+      <span aria-hidden="true">💡</span>
+      <h2>改善のアイデア</h2>
+      <p>見づらい場所や、追加してほしい機能を教えてください。</p>
+    </section>
+    <section class="glass">
+      <span aria-hidden="true">📝</span>
+      <h2>読みたいテーマ</h2>
+      <p>研究・写真・日々の記録など、今後読みたい内容を送れます。</p>
+    </section>
+    <section class="glass">
+      <span aria-hidden="true">🌱</span>
+      <h2>ひとこと感想</h2>
+      <p>短い感想も歓迎です。ほかの人の意見には 👍 で反応できます。</p>
+    </section>
+  </div>
+
+  <CommentSection
+    heading="みんなの意見"
+    intro="名前と意見だけで送れます。アカウント登録は不要で、ほかの人も返信や 👍 ができます。"
+    pageId="site-feedback"
+  />
+</Layout>
+
+<style>
+  .feedback-header {
+    max-width: 720px;
+    margin: 0 auto 2rem;
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+  }
+
+  .feedback-header h1 {
+    margin: 0.3rem 0 0.8rem;
+  }
+
+  .lead {
+    color: var(--text-muted);
+    line-height: 1.9;
+  }
+
+  .feedback-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .feedback-cards section {
+    --glass-radius: 16px;
+    padding: 1.15rem;
+  }
+
+  .feedback-cards span {
+    font-size: 1.5rem;
+  }
+
+  .feedback-cards h2 {
+    margin: 0.55rem 0 0.35rem;
+    font-size: 1rem;
+  }
+
+  .feedback-cards p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 680px) {
+    .feedback-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
