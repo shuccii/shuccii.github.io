@@ -1,21 +1,47 @@
-# Security Policy
+# セキュリティポリシー
 
-## Supported Versions
+## サポート対象
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+このリポジトリは、GitHub Pages で継続的に公開している個人サイトです。バージョン番号を付けたリリースは行っていません。
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 対象 | サポート |
+| --- | --- |
+| `main` ブランチの最新版および現在の公開サイト | 対象 |
+| 過去のコミット、フォーク、ローカル環境 | 対象外 |
 
-## Reporting a Vulnerability
+セキュリティ修正は、原則として `main` ブランチと公開サイトへ反映します。
 
-Use this section to tell people how to report a vulnerability.
+## 脆弱性の報告
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+脆弱性や認証情報の露出を発見した場合は、公開 Issue を作成せず、[非公開の意見ボックス](https://shuccii.github.io/feedback/)から報告してください。本文の先頭に `【セキュリティ報告】` と記載し、可能な範囲で次の情報を含めてください。
+
+- 問題の概要と影響
+- 影響を受ける URL または機能
+- 再現手順
+- 確認した環境
+- スクリーンショットなどの参考情報
+- 返信が必要な場合の連絡先（任意）
+
+実際のトークン、パスワード、個人情報などの機密情報は送信しないでください。認証情報の露出を発見した場合も、その値自体は記載せず、確認できた場所だけを知らせてください。
+
+報告後は、原則として7日以内に受領を確認し、14日以内を目安に初期調査の結果をお知らせします。調査が長期化する場合は、可能な範囲で進捗を共有します。脆弱性として確認できた場合は修正と公開方法を検討し、対象外または再現できない場合はその理由を説明します。
+
+## 対象範囲
+
+次の項目は報告対象です。
+
+- このリポジトリのソースコードと依存関係
+- 公開サイト上の機能
+- 編集用トークンなど、認証情報の取り扱い
+- コメントおよび非公開意見ボックスの権限・データ保護
+
+GitHub、Supabase、Cloudflare など第三者サービス自体の脆弱性は、各サービスの窓口へ報告してください。ただし、このサイトの設定や実装が原因で影響が生じる場合は報告対象です。
+
+## 安全な検証のお願い
+
+検証は必要最小限にとどめ、次の行為は行わないでください。
+
+- 他者のデータへのアクセス、変更、削除
+- サービス妨害や大量の自動リクエスト
+- スパム投稿やソーシャルエンジニアリング
+- 脆弱性が修正される前の公開
