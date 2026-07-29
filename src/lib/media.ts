@@ -111,11 +111,13 @@ export type BackgroundMedia =
 export type TileMedia =
   | {
       type: "image";
+      file: string;
       url: string;
       image: ImageMetadata;
     }
   | {
       type: "video";
+      file: string;
       url: string;
     };
 
@@ -144,24 +146,55 @@ export function getTileMedia(): TileMedia[] {
     ...Object.entries(backgroundImageModules).map(
       ([path, mod]): TileMedia => ({
         type: "image",
+        file: fileName(path),
         url: backgroundUrlModules[path],
         image: mod.default,
       }),
     ),
-    ...Object.values(backgroundVideoModules).map(
-      (url): TileMedia => ({ type: "video", url }),
+    ...Object.entries(backgroundVideoModules).map(
+      ([path, url]): TileMedia => ({ type: "video", file: fileName(path), url }),
     ),
     ...Object.entries(photoModules).map(
       ([path, mod]): TileMedia => ({
         type: "image",
+        file: fileName(path),
         url: photoUrlModules[path],
         image: mod.default,
       }),
     ),
-    ...Object.values(videoUrlModules).map(
-      (url): TileMedia => ({ type: "video", url }),
+    ...Object.entries(videoUrlModules).map(
+      ([path, url]): TileMedia => ({ type: "video", file: fileName(path), url }),
     ),
   ];
+}
+
+// トップページの6項目は、背景専用フォルダ内の風景写真だけを使う。
+// 夜景 / 紅葉 / 夕景 / 花畑 / 庭園 / 都市風景を割り当て、似た景色が続かないようにする。
+const topPageTileFiles = [
+  "IMG_0536.jpeg",
+  "IMG_1400.JPG",
+  "IMG_2672.JPG",
+  "IMG_2943.JPG",
+  "IMG_9900.jpeg",
+  "bg-rainbow-bridge.jpg",
+];
+
+export function getTopPageTileMedia(): TileMedia[] {
+  const backgrounds = Object.entries(backgroundImageModules).map(
+    ([path, mod]): TileMedia => ({
+      type: "image",
+      file: fileName(path),
+      url: backgroundUrlModules[path],
+      image: mod.default,
+    }),
+  );
+  const byFile = new Map(backgrounds.map((media) => [media.file, media]));
+  const selected = topPageTileFiles
+    .map((file) => byFile.get(file))
+    .filter((media): media is TileMedia => media !== undefined);
+  const selectedFiles = new Set(selected.map((media) => media.file));
+
+  return [...selected, ...backgrounds.filter((media) => !selectedFiles.has(media.file))];
 }
 
 export interface PostRef {

@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { getCollection } from "astro:content";
 import { Image, getImage } from "astro:assets";
-import { getTileMedia, getPhotos } from "../lib/media";
+import { getTopPageTileMedia, getPhotos } from "../lib/media";
 import site from "../data/site.json";
 
 const posts = (await getCollection("blog")).sort(
@@ -14,8 +14,8 @@ const recentPhotos = getPhotos().slice(0, 4);
 const fmt = (d: Date) =>
   `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 
-// 各ページへのセクションブロック(写真・動画を順に割り当て)
-const tileMedia = getTileMedia();
+// 各ページへのセクションブロック。被写体が似ない6枚を優先して割り当てる。
+const tileMedia = getTopPageTileMedia();
 const blockDefs = [
   { href: "/blog/", en: "Blog", ja: "ブログ", desc: site.home.secBlog },
   { href: "/photos/", en: "Photo", ja: "写真", desc: site.home.secPhoto },
@@ -437,7 +437,21 @@ const blocks = await Promise.all(
     width: 44%;
     margin-bottom: clamp(1.5rem, 3.5vw, 3rem);
     padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1.5rem, 3vw, 2.6rem);
-    color: #2c343d;
+    /* 項目ブロックは写真を十分に透かし、文字は影と濃色で判読性を保つ。 */
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0.025) 45%,
+        rgba(255, 255, 255, 0.07)
+      ),
+      rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.58);
+    backdrop-filter: blur(9px) saturate(1.12) contrast(1.06) brightness(1.08);
+    -webkit-backdrop-filter: blur(9px) saturate(1.12) contrast(1.06) brightness(1.08);
+    color: var(--tile-text);
+    text-shadow: 0 1px 14px var(--text-shadow);
+    transition: color 300ms ease;
   }
 
   .block:nth-child(odd) .block-text {
@@ -452,7 +466,8 @@ const blocks = await Promise.all(
     font-size: 0.66rem;
     letter-spacing: 0.34em;
     text-transform: uppercase;
-    color: #1e5aa8;
+    color: var(--tile-accent);
+    transition: color 300ms ease;
   }
 
   .block-ja {
@@ -465,21 +480,22 @@ const blocks = await Promise.all(
   .block-desc {
     font-size: 0.86rem;
     line-height: 1.95;
-    color: #4b545e;
+    color: var(--tile-description);
+    transition: color 300ms ease;
   }
 
   .block-more {
     margin-top: 1rem;
     font-size: 0.7rem;
     letter-spacing: 0.24em;
-    color: #6b7684;
+    color: var(--tile-muted);
     transition:
       color 0.3s ease,
       transform 0.3s ease;
   }
 
   .block:hover .block-more {
-    color: #1e5aa8;
+    color: var(--tile-accent);
     transform: translateX(6px);
   }
 
@@ -548,7 +564,8 @@ const blocks = await Promise.all(
     display: flex;
     flex-direction: column;
     padding: 1.1rem 1.2rem;
-    color: #30343a;
+    color: var(--text);
+    text-shadow: 0 1px 12px var(--text-shadow);
   }
 
   .update-card:hover {
@@ -558,12 +575,12 @@ const blocks = await Promise.all(
   .update-type {
     font-size: 0.62rem;
     letter-spacing: 0.3em;
-    color: #1e5aa8;
+    color: var(--tile-accent);
   }
 
   .update-date {
     font-size: 0.78rem;
-    color: #68717a;
+    color: var(--text-muted);
     margin-top: 0.2rem;
   }
 
@@ -575,7 +592,7 @@ const blocks = await Promise.all(
 
   .update-desc {
     font-size: 0.82rem;
-    color: #59616b;
+    color: var(--text-muted);
     line-height: 1.7;
     margin-top: 0.3rem;
     display: -webkit-box;
@@ -621,7 +638,7 @@ const blocks = await Promise.all(
       min-height: auto;
       padding: 1.8rem 0 2.5rem;
       justify-content: flex-start;
-      color: #222b34;
+      color: var(--text);
     }
 
     .hero-en {
@@ -634,7 +651,7 @@ const blocks = await Promise.all(
       font-size: clamp(1.9rem, 9vw, 2.25rem);
       letter-spacing: 0.14em;
       margin-bottom: 1.35rem;
-      text-shadow: 0 1px 12px rgba(255, 255, 255, 0.58);
+      text-shadow: 0 1px 12px var(--text-shadow);
     }
 
     .manifesto {
@@ -668,7 +685,7 @@ const blocks = await Promise.all(
       font-size: 0.8rem;
       line-height: 1.8;
       color: color-mix(in srgb, var(--text) 78%, transparent);
-      text-shadow: 0 1px 8px rgba(255, 255, 255, 0.75);
+      text-shadow: 0 1px 8px var(--text-shadow);
     }
 
     .scroll-cue {

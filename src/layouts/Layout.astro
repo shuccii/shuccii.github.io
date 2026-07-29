@@ -26,7 +26,7 @@ const nav = [
 const current = Astro.url.pathname;
 const bgMedia = await Promise.all(
   getBackgroundMedia().map(async (media) => {
-    if (media.type !== "image") return media;
+    if (media.type !== "image") return { ...media, id: media.url };
 
     // 元写真の画質は100のまま、背景表示に十分な解像度へ変換する。
     // モバイルでも縦画面の cover 表示で解像感を落とさないよう1920pxを確保する。
@@ -36,6 +36,7 @@ const bgMedia = await Promise.all(
     ]);
 
     return {
+      id: media.url,
       type: "image" as const,
       url: desktop.src,
       mobileUrl: mobile.src,
@@ -76,18 +77,18 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="description" content={description} />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="base-uri 'self'; form-action 'self'; object-src 'none'"
+    />
     <title>{title}</title>
   </head>
   <body>
-    <!-- Liquid Glass: 背景を水のように屈折させるSVGフィルター -->
-    <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden;">
-      <filter id="liquid-glass-distortion" x="-20%" y="-20%" width="140%" height="140%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="92" result="noise" />
-        <feGaussianBlur in="noise" stdDeviation="2" result="soft" />
-        <feDisplacementMap in="SourceGraphic" in2="soft" scale="46" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
-
     <!-- 背景(写真・動画がランダムに切り替わる2枚のレイヤー) -->
     <div class="bg-layer" id="bg-a" aria-hidden="true"></div>
     <div class="bg-layer" id="bg-b" aria-hidden="true"></div>
@@ -231,15 +232,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         let firstDisplay = true;
 
         const applyBackgroundTone = (brightness) => {
-          const dark = brightness < 138;
-          const distance = dark
-            ? (138 - brightness) / 138
-            : (brightness - 138) / (255 - 138);
-          const strength = dark ? 0.25 + distance * 0.1 : 0.25 + distance * 0.23;
+          const dark = brightness < 145;
+          // 背景写真はそのまま見せ、明暗に応じて文字色だけを切り替える。
           document.body.classList.toggle("background-dark", dark);
           document.body.classList.toggle("background-light", !dark);
-          document.documentElement.style.setProperty("--bg-veil-color", "253 253 252");
-          document.documentElement.style.setProperty("--bg-veil-strength", String(strength));
         };
 
         const brightnessFromElement = (element) => {
@@ -263,18 +259,25 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         };
 
         const pick = () => {
-          // 初回だけは軽い写真からランダムに選ぶ。
-          // 2回目以降は動画を含む全候補へ戻し、背景の変化は維持する。
+          // 初回だけは軽い写真から選び、前回の初期背景を避ける。
+          // これにより、リロードしても同じ見た目が続きにくい。
+          const previousInitial = firstDisplay
+            ? localStorage.getItem("lastInitialBackground")
+            : null;
           const candidates = bgMedia
             .map((media, index) => ({ media, index }))
             .filter(
               ({ media, index }) =>
-                index !== lastIndex && (!firstDisplay || media.type === "image"),
+                index !== lastIndex &&
+                (!firstDisplay || (media.type === "image" && media.id !== previousInitial)),
             );
           const pool = candidates.length > 0
             ? candidates
-            : bgMedia.map((media, index) => ({ media, index }));
-          return pool[Math.floor(Math.random() * pool.length)].index;
+            : bgMedia
+              .map((media, index) => ({ media, index }))
+              .filter(({ media, index }) => index !== lastIndex && (!firstDisplay || media.type === "image"));
+          const random = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
+          return pool[Math.floor(random * pool.length)].index;
         };
 
         const setMedia = (layer, media, onReady, onFailure) => {
@@ -314,7 +317,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             v.loop = true;
             v.playsInline = true;
             v.autoplay = true;
-            v.preload = "auto";
+            // 初期表示では写真のみ選ぶため、後続動画はメタデータだけ先に読む。
+            v.preload = "metadata";
             v.setAttribute("muted", "");
             v.setAttribute("playsinline", "");
             v.setAttribute("webkit-playsinline", "");
@@ -340,6 +344,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             layer,
             bgMedia[i],
             () => {
+              if (firstDisplay) {
+                localStorage.setItem("lastInitialBackground", bgMedia[i].id ?? bgMedia[i].url);
+              }
               layer.style.opacity = "1";
               const other = layers[1 - showing];
               other.style.opacity = "0";
@@ -929,6 +936,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       type="module"
       src="https://static.cloudflareinsights.com/beacon.min.js"
       data-cf-beacon='{"token":"9d0ab7a9ea5545c4907a9b53b4082f5e"}'
+      fetchpriority="low"
     ></script>
     <!-- End Cloudflare Web Analytics -->
   </body>
@@ -936,40 +944,43 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
 <style is:global>
   :root {
-    --text: #222222;
-    --text-muted: #777777;
+    --text: #18232e;
+    --text-muted: #465666;
     --bg: #fdfdfc;
     --border: #e3e2e0;
     --accent: #1e5aa8;
     --accent-weak: rgba(30, 90, 168, 0.08);
     --panel: rgba(255, 255, 255, 0.72);
-    --surface: rgba(253, 253, 252, 0.88);
-    --surface-text: #29323b;
-    --surface-muted: #66717c;
+    --surface: rgba(253, 253, 252, 0.64);
+    --surface-text: #18232e;
+    --surface-muted: #465666;
+    --tile-text: #14222f;
+    --tile-description: #304658;
+    --tile-muted: #40596d;
+    --tile-accent: #13559a;
     --tag-text: #1e5aa8;
     --tag-bg: rgba(30, 90, 168, 0.08);
     --tag-border: rgba(30, 90, 168, 0.18);
     --floating-bg: rgba(253, 253, 252, 0.64);
     --floating-text: #29323b;
     --floating-border: rgba(255, 255, 255, 0.58);
+    --text-shadow: rgba(255, 255, 255, 0.84);
     --bg-veil-color: 253 253 252;
-    --bg-veil-strength: 0.36;
+    --bg-veil-strength: 0.32;
     --spring: cubic-bezier(0.2, 0.85, 0.25, 1.18);
   }
 
+  /* 暗い写真では文字と文字影だけを反転させる。ガラス面や背景色は変えない。 */
   body.background-dark {
-    --text: #f7f9fd;
-    --text-muted: rgba(239, 244, 252, 0.8);
-    --border: rgba(255, 255, 255, 0.45);
-    --accent: #e3f3ff;
-    --accent-weak: rgba(225, 242, 255, 0.18);
-    --panel: rgba(253, 253, 252, 0.72);
+    --text: #f8fbff;
+    --text-muted: rgba(247, 251, 255, 0.86);
+    --accent: #e5f2ff;
+    --tile-text: #f8fbff;
+    --tile-description: rgba(247, 251, 255, 0.92);
+    --tile-muted: rgba(242, 248, 255, 0.9);
+    --tile-accent: #e5f2ff;
     --tag-text: #f5fbff;
-    --tag-bg: rgba(7, 27, 52, 0.48);
-    --tag-border: rgba(226, 244, 255, 0.64);
-    --floating-bg: rgba(11, 23, 39, 0.58);
-    --floating-text: #f7f9fd;
-    --floating-border: rgba(226, 243, 255, 0.42);
+    --text-shadow: rgba(4, 12, 20, 0.86);
   }
 
   * {
@@ -1056,6 +1067,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       rgb(var(--bg-veil-color) / calc(var(--bg-veil-strength) * 1.16))
     );
     z-index: -1;
+    transition: background 500ms ease;
   }
 
   /* ページ遷移フェード */
@@ -1239,21 +1251,21 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     background:
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.13),
-        rgba(255, 255, 255, 0.018) 45%,
-        rgba(255, 255, 255, 0.055)
+        rgba(255, 255, 255, 0.3),
+        rgba(255, 255, 255, 0.09) 45%,
+        rgba(255, 255, 255, 0.18)
       ),
-      rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.44);
+      rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.64);
     border-radius: var(--glass-radius);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.5) inset,
       0 -1px 0 rgba(255, 255, 255, 0.08) inset,
-      0 12px 32px rgba(20, 30, 55, 0.12),
-      0 3px 9px rgba(20, 30, 55, 0.06);
-    /* Appleのregular glassに近い、背景を残す軽いぼかし */
-    backdrop-filter: blur(11px) saturate(1.42) contrast(1.025) brightness(1.04);
-    -webkit-backdrop-filter: blur(11px) saturate(1.42) contrast(1.025) brightness(1.04);
+      0 12px 32px rgba(20, 30, 55, 0.14),
+      0 3px 9px rgba(20, 30, 55, 0.08);
+    /* 透過は高く保ち、軽いぼかしで文字だけを読みやすくする。 */
+    backdrop-filter: blur(10px) saturate(1.06) contrast(1.04) brightness(1.06);
+    -webkit-backdrop-filter: blur(10px) saturate(1.06) contrast(1.04) brightness(1.06);
     transform: translate3d(var(--move-x), var(--move-y), 0)
       scale(var(--glass-scale));
     transition:
@@ -1352,18 +1364,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     border-radius: 0;
   }
 
-  /* 背景適応: 暗い背景では全Glassの透明度と文字コントラストを揃える */
-  body.background-dark .glass {
-    background:
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.24),
-        rgba(255, 255, 255, 0.08) 45%,
-        rgba(255, 255, 255, 0.14)
-      ),
-      rgba(255, 255, 255, 0.12);
-  }
-
   /* 背景適応: コンテンツがヘッダーの下に入ったら不透明度と影を強める */
   .site-header[data-scrolled="true"] {
     background:
@@ -1419,22 +1419,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     position: sticky;
     top: 0;
     z-index: 10;
-  }
-
-  body.background-dark .site-header,
-  body.background-dark .site-footer {
-    color: #222222;
-  }
-
-  body.background-dark .site-header a,
-  body.background-dark .site-footer a {
-    color: #3c4653;
-  }
-
-  body.background-dark .site-header a:hover,
-  body.background-dark .site-header a.active,
-  body.background-dark .site-footer a:hover {
-    color: #1e5aa8;
   }
 
   .header-inner {
@@ -1727,14 +1711,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   @media (max-width: 1024px), (hover: none) and (pointer: coarse) {
-    body,
-    body.background-dark {
-      --text: #222b34;
-      --text-muted: rgba(42, 52, 62, 0.78);
-      --accent: #1e5aa8;
+    body {
       --border: rgba(255, 255, 255, 0.58);
-      --bg-veil-color: 253 253 252;
-      --bg-veil-strength: 0.48;
       --floating-bg: rgba(42, 52, 62, 0.78);
       --floating-text: #ffffff;
     }
