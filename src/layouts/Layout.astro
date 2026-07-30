@@ -1207,23 +1207,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     padding-left: clamp(1.5rem, 4vw, 3.5rem);
   }
 
-  /* TOP以外のページで共通利用する、見出しと導入文のガラス面 */
-  .page-intro {
-    --glass-radius: 18px;
-    margin-bottom: 2rem;
-    padding: clamp(1rem, 3vw, 1.5rem);
-    color: var(--text);
-    text-shadow: 0 1px 12px var(--text-shadow);
-  }
-
-  .page-intro h1 {
-    margin-bottom: 0.55rem;
-  }
-
-  .page-intro > :last-child {
-    margin-bottom: 0;
-  }
-
   h1 {
     font-size: 1.7rem;
     font-weight: 600;
@@ -1815,21 +1798,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     main.container {
       padding-top: 1.8rem;
       padding-bottom: 5rem;
-    }
-
-    .page-intro {
-      --glass-radius: 16px;
-      margin-bottom: 1.35rem;
-      padding: 1rem;
-      background:
-        linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.28),
-          rgba(255, 255, 255, 0.07)
-        ),
-        rgba(248, 250, 252, 0.18);
-      backdrop-filter: blur(9px) saturate(1.08) brightness(1.04);
-      -webkit-backdrop-filter: blur(9px) saturate(1.08) brightness(1.04);
     }
 
     h1 {
