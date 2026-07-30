@@ -24,6 +24,20 @@ const nav = [
 ];
 
 const current = Astro.url.pathname;
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "font-src 'self'",
+  "connect-src 'self' https://*.supabase.co https://api.github.com https://cloudflareinsights.com" +
+    (import.meta.env.DEV ? " http://localhost:* ws://localhost:*" : ""),
+  "upgrade-insecure-requests",
+].join("; ");
 const bgMedia = await Promise.all(
   getBackgroundMedia().map(async (media) => {
     if (media.type !== "image") return { ...media, id: media.url };
@@ -84,7 +98,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     />
     <meta
       http-equiv="Content-Security-Policy"
-      content="base-uri 'self'; form-action 'self'; object-src 'none'"
+      content={csp}
     />
     <title>{title}</title>
   </head>
@@ -110,6 +124,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
                 <li>
                   <a
                     href={item.href}
+                    aria-current={
+                      (item.href === "/"
+                        ? current === "/"
+                        : current.startsWith(item.href))
+                        ? "page"
+                        : undefined
+                    }
                     class:list={{
                       active:
                         item.href === "/"
@@ -141,6 +162,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               <li>
                 <a
                   href={item.href}
+                  aria-current={
+                    (item.href === "/"
+                      ? current === "/"
+                      : current.startsWith(item.href))
+                      ? "page"
+                      : undefined
+                  }
                   class:list={{
                     active:
                       item.href === "/"
@@ -490,6 +518,21 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         };
         window.addEventListener("scroll", updateGlassHeader, { passive: true });
         updateGlassHeader();
+      }
+    </script>
+
+    <script>
+      // 横スクロール式ナビでは、現在のタブが初期表示から見える位置に来るよう整える。
+      const mobileNav = document.querySelector<HTMLElement>(".mobile-nav");
+      const activeMobileTab =
+        mobileNav?.querySelector<HTMLElement>('a[aria-current="page"]');
+      if (mobileNav && activeMobileTab) {
+        requestAnimationFrame(() => {
+          const targetLeft =
+            activeMobileTab.offsetLeft -
+            (mobileNav.clientWidth - activeMobileTab.offsetWidth) / 2;
+          mobileNav.scrollTo({ left: Math.max(0, targetLeft), behavior: "auto" });
+        });
       }
     </script>
 
@@ -1782,23 +1825,25 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       width: calc(100% - 1.1rem);
       margin: 0.1rem auto 0.85rem;
       overflow-x: auto;
-      padding: 0.68rem 0.72rem;
+      padding: 0.28rem;
       background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.035)),
-        rgba(245, 247, 249, 0.24);
-      border: 1px solid rgba(255, 255, 255, 0.48);
-      border-radius: 1.2rem;
+        linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.24),
+          rgba(255, 255, 255, 0.06)
+        ),
+        rgba(245, 247, 249, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.56);
+      border-radius: 1rem;
       box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.78) inset,
-        0 10px 30px rgba(20, 30, 55, 0.18);
-      backdrop-filter: blur(11px) saturate(1.46) brightness(1.04);
-      -webkit-backdrop-filter: blur(11px) saturate(1.46) brightness(1.04);
+        0 1px 0 rgba(255, 255, 255, 0.7) inset,
+        0 8px 24px rgba(20, 30, 55, 0.14);
+      backdrop-filter: blur(13px) saturate(1.22) brightness(1.04);
+      -webkit-backdrop-filter: blur(13px) saturate(1.22) brightness(1.04);
       scrollbar-width: none;
       scroll-snap-type: x proximity;
+      scroll-padding-inline: 0.28rem;
       color: #303a45;
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.16)),
-        rgba(242, 246, 250, 0.72);
     }
 
     .mobile-nav::-webkit-scrollbar {
@@ -1809,9 +1854,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       display: flex;
       width: max-content;
       flex-wrap: nowrap;
-      gap: 0.85rem;
+      gap: 0.12rem;
       margin: 0;
-      padding: 0 0.15rem;
+      padding: 0;
       list-style: none;
     }
 
@@ -1820,19 +1865,48 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     .mobile-nav a {
-      display: block;
-      padding: 0.12rem 0;
+      display: flex;
+      min-height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      padding: 0.42rem 0.68rem;
+      border: 1px solid transparent;
+      border-radius: 0.72rem;
       color: #4f5964;
-      font-size: 0.64rem;
-      letter-spacing: 0.11em;
-      line-height: 1.5;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      line-height: 1;
       white-space: nowrap;
     }
 
-    .mobile-nav a:hover,
+    .mobile-nav a:hover {
+      color: #2f4f74;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.22);
+    }
+
     .mobile-nav a.active {
       color: #1e5aa8;
       text-decoration: none;
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.62),
+          rgba(255, 255, 255, 0.26)
+        ),
+        rgba(244, 248, 252, 0.34);
+      border-color: rgba(255, 255, 255, 0.7);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.82) inset,
+        0 3px 10px rgba(20, 30, 55, 0.12);
+    }
+
+    /* iOS Safariで入力時に画面が自動拡大されない文字サイズを確保する。 */
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
     }
 
     /* タッチ操作ではデスクトップ用の追従変形を残さない */
