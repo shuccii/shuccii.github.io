@@ -8,11 +8,13 @@ const postMap = await getMediaPostMap();
 ---
 
 <Layout title="写真 | Shuichi Tani">
-  <h1><span class="en">Photo</span>写真</h1>
-  <p class="hint">
-    ここに追加した写真は、サイト全体の背景としてもランダムに表示されます。
-    写真をクリックすると、縦横比を保ったまま拡大表示されます。
-  </p>
+  <header class="page-intro glass">
+    <h1><span class="en">Photo</span>写真</h1>
+    <p class="hint">
+      ここに追加した写真は、サイト全体の背景としてもランダムに表示されます。
+      写真をクリックすると、縦横比を保ったまま拡大表示されます。
+    </p>
+  </header>
   {
     photos.length > 0 ? (
           <div class="gallery">

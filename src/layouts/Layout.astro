@@ -1,6 +1,7 @@
 ---
 import { getBackgroundMedia } from "../lib/media";
 import { getImage } from "astro:assets";
+import initialBackgroundSource from "../assets/backgrounds/bg-city-dusk.jpg";
 import site from "../data/site.json";
 
 interface Props {
@@ -24,6 +25,11 @@ const nav = [
 ];
 
 const current = Astro.url.pathname;
+const initialBackground = await getImage({
+  src: initialBackgroundSource,
+  width: 1920,
+  quality: 100,
+});
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -91,6 +97,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="description" content={description} />
+    <link
+      rel="preload"
+      as="image"
+      href={initialBackground.src}
+      fetchpriority="high"
+    />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta
       http-equiv="Permissions-Policy"
@@ -102,9 +114,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     />
     <title>{title}</title>
   </head>
-  <body>
+  <body class="background-light">
     <!-- 背景(写真・動画がランダムに切り替わる2枚のレイヤー) -->
-    <div class="bg-layer" id="bg-a" aria-hidden="true"></div>
+    <div
+      class="bg-layer"
+      id="bg-a"
+      aria-hidden="true"
+      style={`background-image: url("${initialBackground.src}"); opacity: 1;`}
+    ></div>
     <div class="bg-layer" id="bg-b" aria-hidden="true"></div>
     <div class="bg-veil" aria-hidden="true"></div>
 
@@ -255,7 +272,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           document.getElementById("bg-a"),
           document.getElementById("bg-b"),
         ];
-        let showing = 0;
+        // HTMLに埋め込んだ軽量な初期背景を表示したまま、裏側へ次の背景を読む。
+        // これにより、各ページを開いた直後に背景が空白になる時間をなくす。
+        let showing = 1;
         let lastIndex = -1;
         let firstDisplay = true;
 
@@ -1188,6 +1207,23 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     padding-left: clamp(1.5rem, 4vw, 3.5rem);
   }
 
+  /* TOP以外のページで共通利用する、見出しと導入文のガラス面 */
+  .page-intro {
+    --glass-radius: 18px;
+    margin-bottom: 2rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    color: var(--text);
+    text-shadow: 0 1px 12px var(--text-shadow);
+  }
+
+  .page-intro h1 {
+    margin-bottom: 0.55rem;
+  }
+
+  .page-intro > :last-child {
+    margin-bottom: 0;
+  }
+
   h1 {
     font-size: 1.7rem;
     font-weight: 600;
@@ -1479,7 +1515,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
-    color: var(--text);
+    /* ヘッダーは明るいガラス面なので、背景写真の明暗に左右されない固定色にする */
+    color: #25303b;
   }
 
   .site-title-ja {
@@ -1512,14 +1549,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   .site-header nav a {
-    color: var(--text-muted);
+    color: #4f5964;
     font-size: 0.76rem;
     letter-spacing: 0.18em;
   }
 
   .site-header nav a:hover,
   .site-header nav a.active {
-    color: var(--accent);
+    color: #1e5aa8;
     text-decoration: none;
   }
 
@@ -1780,6 +1817,21 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       padding-bottom: 5rem;
     }
 
+    .page-intro {
+      --glass-radius: 16px;
+      margin-bottom: 1.35rem;
+      padding: 1rem;
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.28),
+          rgba(255, 255, 255, 0.07)
+        ),
+        rgba(248, 250, 252, 0.18);
+      backdrop-filter: blur(9px) saturate(1.08) brightness(1.04);
+      -webkit-backdrop-filter: blur(9px) saturate(1.08) brightness(1.04);
+    }
+
     h1 {
       font-size: 1.45rem;
       margin-bottom: 1.5rem;
@@ -1864,7 +1916,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       scroll-snap-align: start;
     }
 
-    .mobile-nav a {
+    .site-header .mobile-nav a {
       display: flex;
       min-height: 2.5rem;
       align-items: center;
@@ -1880,13 +1932,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       white-space: nowrap;
     }
 
-    .mobile-nav a:hover {
+    .site-header .mobile-nav a:hover {
       color: #2f4f74;
       text-decoration: none;
       background: rgba(255, 255, 255, 0.22);
     }
 
-    .mobile-nav a.active {
+    .site-header .mobile-nav a.active {
       color: #1e5aa8;
       text-decoration: none;
       background:

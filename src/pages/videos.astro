@@ -11,7 +11,9 @@ const youtubeVideos: { id: string; title: string }[] = [];
 ---
 
 <Layout title="ビデオ | Shuichi Tani">
-  <h1><span class="en">Video</span>ビデオ</h1>
+  <header class="page-intro glass">
+    <h1><span class="en">Video</span>ビデオ</h1>
+  </header>
   {
     videos.length === 0 && youtubeVideos.length === 0 ? (
       <div class="empty glass">
