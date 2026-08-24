@@ -115,6 +115,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     <title>{title}</title>
   </head>
   <body class="background-light">
+    <!-- 印刷時は動的背景とは分離した固定レイヤーを各ページへ描画する -->
+    <img
+      class="print-bg"
+      aria-hidden="true"
+      src={initialBackground.src}
+      alt=""
+    />
+
     <!-- 背景(写真・動画がランダムに切り替わる2枚のレイヤー) -->
     <div
       class="bg-layer"
@@ -1106,6 +1114,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     object-fit: cover;
   }
 
+  .print-bg {
+    display: none;
+  }
+
   #bg-b {
     animation-delay: -18s;
   }
@@ -1967,6 +1979,51 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
     #content-editor textarea {
       min-height: 12rem;
+    }
+  }
+
+  @media print {
+    * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /*
+     * 100vh の動的背景は印刷ページの途中で終わるブラウザがある。
+     * 印刷専用の固定レイヤーをページ枠いっぱいにし、各ページへ繰り返す。
+     */
+    .print-bg {
+      display: block;
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: -2;
+    }
+
+    .bg-layer {
+      display: none;
+    }
+
+    .bg-veil {
+      transition: none;
+    }
+
+    #page-fade,
+    #edit-bar,
+    #content-editor {
+      display: none !important;
+    }
+
+    /* 未スクロールの要素も印刷対象に含める。 */
+    .reveal,
+    .m-line {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+      transition: none !important;
     }
   }
 </style>
