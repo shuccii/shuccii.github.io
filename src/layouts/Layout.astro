@@ -30,6 +30,41 @@ const initialBackground = await getImage({
   width: 1920,
   quality: 100,
 });
+
+// SNSでリンクを共有したときのカード画像(1200x630)。背景写真から切り出す。
+const ogImage = await getImage({
+  src: initialBackgroundSource,
+  width: 1200,
+  height: 630,
+  fit: "cover",
+  quality: 80,
+  format: "jpeg",
+});
+
+const siteName = "余白の庭";
+const baseUrl = Astro.site ?? new URL(Astro.url.origin);
+const canonicalUrl = new URL(Astro.url.pathname, baseUrl);
+const ogImageUrl = new URL(ogImage.src, baseUrl);
+// 埋め込みプレイヤー(/music/、/videos/)の配信元。
+// frame-src を書かないと default-src 'self' に落ちて iframe が全てブロックされる。
+const embedOrigins = [
+  "https://open.spotify.com",
+  "https://embed.music.apple.com",
+  "https://www.youtube-nocookie.com",
+];
+
+// Supabaseの接続先は自分のプロジェクト1ホストだけに限定する。
+// ワイルドカード(https://*.supabase.co)だと、万一スクリプトを注入された場合に
+// 攻撃者が用意した別のSupabaseプロジェクトへデータを送り出せてしまう。
+// 環境変数が未設定のビルドでコメント欄が壊れないよう、その場合だけ従来の値に戻す。
+const supabaseConnectSrc = (() => {
+  try {
+    return new URL(import.meta.env.PUBLIC_SUPABASE_URL).origin;
+  } catch {
+    return "https://*.supabase.co";
+  }
+})();
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -40,7 +75,8 @@ const csp = [
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "font-src 'self'",
-  "connect-src 'self' https://*.supabase.co https://api.github.com https://cloudflareinsights.com" +
+  `frame-src ${embedOrigins.join(" ")}`,
+  `connect-src 'self' ${supabaseConnectSrc} https://api.github.com https://cloudflareinsights.com` +
     (import.meta.env.DEV ? " http://localhost:* ws://localhost:*" : ""),
   "upgrade-insecure-requests",
 ].join("; ");
@@ -97,6 +133,25 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl.href} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="/favicon.ico" sizes="any" />
+
+    <!-- SNSでの共有カード -->
+    <meta property="og:type" content={Astro.url.pathname.startsWith("/blog/") && Astro.url.pathname !== "/blog/" ? "article" : "website"} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl.href} />
+    <meta property="og:image" content={ogImageUrl.href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl.href} />
+
     <link
       rel="preload"
       as="image"

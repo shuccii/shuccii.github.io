@@ -12,10 +12,11 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^7.1.6"
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.3.3"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
-    "sharp@0.35.3": true
+    "sharp@0.35.4": true
   }
 }

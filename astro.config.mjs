@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from "astro/config";
+import sitemap from "@astrojs/sitemap";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -66,6 +67,12 @@ function editApi() {
 
 export default defineConfig({
   site: "https://shuccii.github.io",
+  integrations: [
+    // sitemap-index.xml を生成する。404ページはクロール対象から外す。
+    sitemap({
+      filter: (page) => !page.endsWith("/404/") && !page.endsWith("/404"),
+    }),
+  ],
   build: {
     // 小さな共通CSSはHTMLへ含め、初期表示時の2本の待ち時間をなくす。
     inlineStylesheets: "always",
