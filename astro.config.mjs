@@ -70,7 +70,12 @@ export default defineConfig({
   integrations: [
     // sitemap-index.xml を生成する。404ページはクロール対象から外す。
     sitemap({
-      filter: (page) => !page.endsWith("/404/") && !page.endsWith("/404"),
+      filter: (page) =>
+        !page.endsWith("/404/") &&
+        !page.endsWith("/404") &&
+        // アクセス記録の管理ページは検索結果に出さない
+        !page.endsWith("/visits/") &&
+        !page.endsWith("/visits"),
     }),
   ],
   build: {

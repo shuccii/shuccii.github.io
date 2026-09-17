@@ -1,5 +1,6 @@
 ---
 import { getBackgroundMedia } from "../lib/media";
+import VisitLogger from "../components/VisitLogger.astro";
 import { getImage } from "astro:assets";
 import initialBackgroundSource from "../assets/backgrounds/bg-city-dusk.jpg";
 import site from "../data/site.json";
@@ -8,9 +9,11 @@ interface Props {
   title: string;
   description?: string;
   wide?: boolean;
+  /** 検索エンジンに載せたくないページ(アクセス記録の管理ページなど) */
+  noindex?: boolean;
 }
 
-const { title, description = "谷 周一の個人サイト「余白の庭」。研究、日記、写真、音楽を置いておく場所。", wide = false } = Astro.props;
+const { title, description = "谷 周一の個人サイト「余白の庭」。研究、日記、写真、音楽を置いておく場所。", wide = false, noindex = false } = Astro.props;
 
 const nav = [
   { href: "/", label: "TOP" },
@@ -76,7 +79,7 @@ const csp = [
   "media-src 'self' blob:",
   "font-src 'self'",
   `frame-src ${embedOrigins.join(" ")}`,
-  `connect-src 'self' ${supabaseConnectSrc} https://api.github.com https://cloudflareinsights.com` +
+  `connect-src 'self' ${supabaseConnectSrc} https://api.github.com https://cloudflareinsights.com https://ipwho.is https://get.geojs.io` +
     (import.meta.env.DEV ? " http://localhost:* ws://localhost:*" : ""),
   "upgrade-insecure-requests",
 ].join("; ");
@@ -158,6 +161,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       href={initialBackground.src}
       fetchpriority="high"
     />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta
       http-equiv="Permissions-Policy"
@@ -1056,6 +1060,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       }
     </script>
 
+    <!-- 地域(国・都道府県・市区町村)だけのアクセス記録 -->
+    <VisitLogger />
+
     <!-- Cloudflare Web Analytics -->
     <script
       type="module"
@@ -1116,17 +1123,6 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 
   html {
     scroll-behavior: smooth;
-  }
-
-  /*
-   * 自前の不透明な背景を持つ要素は、写真が透けないので既に十分な差がある。
-   * ここへ縁を足すと文字がにじむだけなので、body から継承した縁を戻す。
-   */
-  input,
-  textarea,
-  select,
-  .submit-button {
-    text-shadow: none;
   }
 
   body {

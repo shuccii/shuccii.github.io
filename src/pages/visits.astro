@@ -1,0 +1,407 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="アクセスの記録 | Shuichi Tani"
+  description="サイトが開かれた地域(国・都道府県・市区町村)を確認する管理用ページです。"
+  noindex={true}
+>
+  <header class="visits-header">
+    <p class="eyebrow">ACCESS</p>
+    <h1>アクセスの記録</h1>
+    <p class="lead">
+      サイトが開かれた地域(国・都道府県・市区町村)を確認できます。合言葉を知っている人だけが表示できます。
+    </p>
+  </header>
+
+  <form class="visits-form glass" data-visits-form>
+    <label>
+      <span>合言葉</span>
+      <input type="password" name="key" autocomplete="current-password" required />
+    </label>
+    <label>
+      <span>期間</span>
+      <select name="days">
+        <option value="7">過去7日</option>
+        <option value="30" selected>過去30日</option>
+        <option value="90">過去90日</option>
+        <option value="365">過去1年</option>
+      </select>
+    </label>
+    <button class="submit-button" type="submit">表示</button>
+    <p class="form-status" data-status role="status" aria-live="polite"></p>
+  </form>
+
+  <div class="visits-result" data-result hidden></div>
+</Layout>
+
+<script>
+  import { toJapaneseCountry, toJapanesePrefecture } from "../lib/jp-regions";
+
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_KEY =
+    import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  type Row = {
+    country?: string | null;
+    country_code?: string | null;
+    region?: string | null;
+    region_code?: string | null;
+    city?: string | null;
+    page_path?: string | null;
+    visits?: number;
+    last_seen?: string | null;
+    created_at?: string | null;
+  };
+
+  type Report = {
+    days: number;
+    total: number;
+    countries: Row[];
+    regions: Row[];
+    cities: Row[];
+    pages: Row[];
+    recent: Row[];
+  };
+
+  const form = document.querySelector<HTMLFormElement>("[data-visits-form]");
+  const status = document.querySelector<HTMLElement>("[data-status]");
+  const result = document.querySelector<HTMLElement>("[data-result]");
+
+  const dateFormat = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const escape = (value: string) =>
+    value.replace(/[&<>"']/g, (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char,
+    );
+
+  /** 県名の表示: 日本は日本語、それ以外は API が返した英字表記 */
+  const regionLabel = (row: Row) =>
+    toJapanesePrefecture(row.country_code, row.region_code, row.region) ??
+    row.region ??
+    "不明";
+
+  const when = (value: string | null | undefined) =>
+    value ? dateFormat.format(new Date(value)) : "—";
+
+  function table(
+    caption: string,
+    head: string[],
+    rows: string[][],
+    emptyMessage: string,
+  ): string {
+    if (rows.length === 0) {
+      return `<section class="visits-block glass"><h2>${escape(caption)}</h2><p class="empty">${escape(emptyMessage)}</p></section>`;
+    }
+    const headHtml = head.map((cell) => `<th>${escape(cell)}</th>`).join("");
+    const bodyHtml = rows
+      .map((row) => `<tr>${row.map((cell) => `<td>${escape(cell)}</td>`).join("")}</tr>`)
+      .join("");
+    return `<section class="visits-block glass">
+      <h2>${escape(caption)}</h2>
+      <div class="table-scroll">
+        <table><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>
+      </div>
+    </section>`;
+  }
+
+  function render(report: Report, result: HTMLElement): void {
+    const total = report.total || 0;
+    const share = (visits: number) =>
+      total > 0 ? `${((visits / total) * 100).toFixed(1)}%` : "—";
+
+    const japan = report.regions.filter(
+      (row) => (row.country_code ?? "").toUpperCase() === "JP",
+    );
+    const japanCities = report.cities.filter(
+      (row) => (row.country_code ?? "").toUpperCase() === "JP",
+    );
+
+    result.innerHTML = [
+      `<p class="visits-total">過去${report.days}日で <strong>${total}</strong> 回の閲覧</p>`,
+      table(
+        "国別",
+        ["国", "回数", "割合"],
+        report.countries.map((row) => [
+          toJapaneseCountry(row.country_code, row.country ?? null),
+          String(row.visits ?? 0),
+          share(row.visits ?? 0),
+        ]),
+        "まだ記録がありません。",
+      ),
+      table(
+        "都道府県別(日本国内)",
+        ["都道府県", "回数", "最後の閲覧"],
+        japan.map((row) => [
+          regionLabel(row),
+          String(row.visits ?? 0),
+          when(row.last_seen),
+        ]),
+        "日本国内からの記録はまだありません。",
+      ),
+      table(
+        "市区町村別(日本国内)",
+        ["市区町村", "都道府県", "回数", "最後の閲覧"],
+        japanCities.map((row) => [
+          row.city ?? "不明",
+          regionLabel(row),
+          String(row.visits ?? 0),
+          when(row.last_seen),
+        ]),
+        "市区町村まで判定できた記録はまだありません。",
+      ),
+      table(
+        "ページ別",
+        ["ページ", "回数"],
+        report.pages.map((row) => [row.page_path ?? "—", String(row.visits ?? 0)]),
+        "まだ記録がありません。",
+      ),
+      table(
+        "直近の閲覧",
+        ["日時", "ページ", "場所"],
+        report.recent.map((row) => {
+          const place = [
+            toJapaneseCountry(row.country_code, row.country ?? null),
+            (row.country_code ?? "").toUpperCase() === "JP" ? regionLabel(row) : row.region,
+            row.city,
+          ]
+            .filter((part): part is string => Boolean(part))
+            .join(" / ");
+          return [when(row.created_at), row.page_path ?? "—", place || "不明"];
+        }),
+        "まだ記録がありません。",
+      ),
+      `<p class="visits-note">
+        地域は IP アドレスからのおおよその判定です。携帯回線や社内ネットワークでは、
+        実際の場所と離れた県・市が出ることがあります。IP アドレス自体は保存していません。
+      </p>`,
+    ].join("");
+    result.removeAttribute("hidden");
+  }
+
+  if (form && status && result) setup(form, status, result);
+
+  function setup(form: HTMLFormElement, status: HTMLElement, result: HTMLElement): void {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        status.className = "form-status error";
+        status.textContent = "Supabase の接続設定がまだ完了していません。";
+        return;
+      }
+
+      const key = (form.elements.namedItem("key") as HTMLInputElement).value;
+      const days = Number((form.elements.namedItem("days") as HTMLSelectElement).value);
+      const submit = form.querySelector<HTMLButtonElement>(".submit-button");
+      if (submit) submit.disabled = true;
+      status.className = "form-status";
+      status.textContent = "読み込み中…";
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_visit_report`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ p_admin_key: key, p_days: days }),
+        });
+        if (!response.ok) {
+          const detail = await response.json().catch(() => ({}));
+          throw new Error(detail.message || "表示できませんでした");
+        }
+        render((await response.json()) as Report, result);
+        status.className = "form-status success";
+        status.textContent = "";
+      } catch (error) {
+        result.setAttribute("hidden", "");
+        status.className = "form-status error";
+        status.textContent = error instanceof Error ? error.message : "表示できませんでした";
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+  }
+</script>
+
+<style>
+  .visits-header {
+    max-width: 720px;
+    margin: 0 auto 2rem;
+    text-align: center;
+  }
+  .eyebrow {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+  }
+  .visits-header h1 {
+    margin: 0.3rem 0 0.8rem;
+  }
+  .lead {
+    color: var(--text-muted);
+    line-height: 1.9;
+  }
+
+  .visits-form {
+    --glass-radius: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.9rem;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+  }
+  .visits-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  .visits-form input,
+  .visits-form select {
+    min-width: 220px;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+  .visits-form select {
+    min-width: 150px;
+  }
+  .submit-button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.62rem 1.3rem;
+    background: #456d50;
+    color: white;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      opacity 160ms ease;
+  }
+  .submit-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(49, 93, 61, 0.22);
+  }
+  .submit-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+  }
+  .form-status {
+    flex-basis: 100%;
+    margin: 0;
+    min-height: 1.2em;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .form-status.error {
+    color: #a3342f;
+  }
+
+  .visits-result {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 680px) {
+    .visits-form input,
+    .visits-form select {
+      min-width: 0;
+      width: 100%;
+    }
+    .visits-form label {
+      flex: 1 1 100%;
+    }
+  }
+</style>
+
+<!-- 結果の表はスクリプトで挿入するため、スコープ付きCSSが当たらない。
+     .visits-result の中だけに効くグローバル指定にする。 -->
+<style is:global>
+  .visits-result .visits-total {
+    margin: 0;
+    text-align: center;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .visits-result .visits-total strong {
+    font-size: 1.3rem;
+    color: var(--text);
+  }
+  .visits-result .visits-block {
+    --glass-radius: 18px;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+  }
+  .visits-result .visits-block h2 {
+    margin: 0 0 0.8rem;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+  }
+  .visits-result .table-scroll {
+    overflow-x: auto;
+  }
+  .visits-result .visits-block table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  .visits-result .visits-block th,
+  .visits-result .visits-block td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .visits-result .visits-block th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+  }
+  /* 1列目に余白を集め、回数などの短い列は右寄せで揃える */
+  .visits-result .visits-block th:first-child,
+  .visits-result .visits-block td:first-child {
+    width: 100%;
+  }
+  .visits-result .visits-block th:not(:first-child),
+  .visits-result .visits-block td:not(:first-child) {
+    text-align: right;
+    padding-left: 1.1rem;
+  }
+  .visits-result .visits-block tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .visits-result .empty {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+  }
+  .visits-result .visits-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+</style>

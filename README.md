@@ -87,6 +87,40 @@ Supabase DashboardのTable Editorで `site_feedback` を開きます。確認済
 このテーブルの読み取り権限を付与していません。
 送信はブラウザ単位で1時間5件までに制限し、識別子はハッシュ化して保存します。
 
+## アクセスされた地域を見る
+
+サイトが開かれた地域(国・都道府県・市区町村)だけを Supabase に記録します。
+Cloudflare Web Analytics は国までしか分からないため、県・市まで見たいとき用の仕組みです。
+
+- 記録するのは「ページのパス」と「粗い地域」だけで、IP アドレス、User-Agent、
+  リファラ、個人を追跡する識別子は保存しません
+- 地域は閲覧者のブラウザから [ipwho.is](https://ipwho.is/)(応答がなければ
+  [GeoJS](https://www.geojs.io/))に問い合わせて判定します
+- ブラウザが Do Not Track / Global Privacy Control を出している場合は記録しません
+- 同じセッション中の同じページは1回だけ数えます。記録は2年で消えます
+- `localhost` では記録しません(開発中の閲覧は混ざりません)
+
+初回設定:
+
+1. Supabase の SQL Editor で `supabase/visits.sql` を実行する
+2. 同じ SQL Editor で、管理ページの合言葉を登録する(長い文字列にしてください)
+
+```sql
+insert into public.site_admin_keys (name, key_hash)
+values ('visits', encode(extensions.digest('ここに長い合言葉', 'sha256'), 'hex'))
+on conflict (name) do update set key_hash = excluded.key_hash;
+```
+
+確認方法: `/visits/` を開き、合言葉と期間を入れて「表示」を押します。
+国別・都道府県別・市区町村別・ページ別・直近の閲覧が表示されます。
+都道府県は日本語(例: 奈良県)で、市区町村は判定元の表記(例: Ikoma)で出ます。
+
+このページはナビゲーションには載せておらず、`noindex` と `robots.txt` で検索避けしています。
+合言葉を知らないと中身は取得できません(ブラウザ用の公開キーでは表のデータを直接読めません)。
+
+地域は IP アドレスからの推定なので、携帯回線や職場のネットワーク経由では実際の場所と
+離れた県・市が出ることがあります。
+
 ## ビルド
 
 ```sh
