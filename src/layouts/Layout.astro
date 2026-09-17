@@ -1091,8 +1091,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --floating-border: rgba(255, 255, 255, 0.58);
     --text-shadow: rgba(255, 255, 255, 0.84);
     /*
-     * 文字のすぐ外側だけに薄い縁を置く。ぼかしを 1〜2px に抑えることで、
-     * 影を落とすのではなく、写真の細かい模様と文字の境目をはっきりさせる。
+     * 文字のすぐ外側だけに薄い縁を置く色。paint-order 対応ブラウザでは縁取り、
+     * 非対応ブラウザでは --text-halo(ぼかした影)のフォールバックに使う。
      * 色は --text-edge だけを明暗で入れ替え、--text-halo は共通で使う。
      */
     --text-edge: rgba(255, 255, 255, 0.62);
@@ -1145,7 +1145,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
     color: var(--text);
     background: var(--bg);
-    /* 背景写真の上でも文字の輪郭が沈まないよう、全体にごく薄い縁を継承させる。 */
+    /* 背景写真の上でも文字の輪郭が沈まないよう、全体にごく薄い縁を継承させる。
+       paint-order 非対応ブラウザ向けのフォールバック(下の @supports で上書きされる)。 */
     text-shadow: var(--text-halo);
     line-height: 2;
     letter-spacing: 0.02em;
@@ -1153,6 +1154,27 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     flex-direction: column;
     min-height: 100vh;
     overflow-x: hidden;
+  }
+
+  /*
+   * paint-order が使えるブラウザでは、ぼかした影ではなく縁取りで輪郭を作る。
+   * stroke を先に描いて fill を上から重ねるため、文字の内側は元の太さと
+   * 輪郭の鋭さを保ったまま、外周にだけ縁が付く。影と違って滲まないので
+   * 文字の解像感が落ちず、背景写真にも一切手を入れないので透明感も変わらない。
+   */
+  @supports (paint-order: stroke) {
+    body {
+      text-shadow: none;
+      -webkit-text-stroke: 2px var(--text-edge);
+      paint-order: stroke fill;
+    }
+
+    input,
+    textarea,
+    select,
+    .submit-button {
+      -webkit-text-stroke: 0;
+    }
   }
 
   /* 横スクロール式ナビがflex本体の最小幅を押し広げないようにする */
