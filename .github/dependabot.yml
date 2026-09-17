@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # npm の依存。astro 本体と公式インテグレーションは1本のPRにまとめる。
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    groups:
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+      dev-dependencies:
+        dependency-type: "development"
+
+  # GitHub Actions。SHA固定した uses: も、横のバージョンコメントを見て更新してくれる。
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
