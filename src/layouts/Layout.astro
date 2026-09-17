@@ -1090,6 +1090,15 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --floating-text: #29323b;
     --floating-border: rgba(255, 255, 255, 0.58);
     --text-shadow: rgba(255, 255, 255, 0.84);
+    /*
+     * 文字のすぐ外側だけに薄い縁を置く。ぼかしを 1〜2px に抑えることで、
+     * 影を落とすのではなく、写真の細かい模様と文字の境目をはっきりさせる。
+     * 色は --text-edge だけを明暗で入れ替え、--text-halo は共通で使う。
+     */
+    --text-edge: rgba(255, 255, 255, 0.62);
+    --text-halo:
+      0 0 1px var(--text-edge),
+      0 0 2px var(--text-edge);
     --bg-veil-color: 253 253 252;
     --bg-veil-strength: 0.32;
     --spring: cubic-bezier(0.2, 0.85, 0.25, 1.18);
@@ -1106,6 +1115,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --tile-accent: #e5f2ff;
     --tag-text: #f5fbff;
     --text-shadow: rgba(4, 12, 20, 0.86);
+    --text-edge: rgba(4, 12, 20, 0.66);
   }
 
   * {
@@ -1118,12 +1128,25 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     scroll-behavior: smooth;
   }
 
+  /*
+   * 自前の不透明な背景を持つ要素は、写真が透けないので既に十分な差がある。
+   * ここへ縁を足すと文字がにじむだけなので、body から継承した縁を戻す。
+   */
+  input,
+  textarea,
+  select,
+  .submit-button {
+    text-shadow: none;
+  }
+
   body {
     font-family:
       -apple-system, BlinkMacSystemFont, "Hiragino Sans",
       "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
     color: var(--text);
     background: var(--bg);
+    /* 背景写真の上でも文字の輪郭が沈まないよう、全体にごく薄い縁を継承させる。 */
+    text-shadow: var(--text-halo);
     line-height: 2;
     letter-spacing: 0.02em;
     display: flex;
