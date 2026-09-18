@@ -16,4 +16,28 @@ const blog = defineCollection({
   }),
 });
 
-export const collections = { blog };
+// 作ったもの(出版物・アプリ・Webサイト)。/works/ に一覧が出る。
+const works = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/works" }),
+  schema: z.object({
+    title: z.string(),
+    // publication = 論文・発表・記事、app = アプリ、site = Webサイト
+    type: z.enum(["publication", "app", "site"]).default("app"),
+    // 公開日・発表日(新しい順に並ぶ)
+    date: z.coerce.date(),
+    description: z.string().optional(),
+    // 公開ページ・DOI・ストアなどのURL。空ならリンクを出さない
+    url: z.string().default(""),
+    // ソースコードのURL(あれば)
+    repo: z.string().default(""),
+    // 掲載先。論文なら雑誌名・学会名、アプリなら動作環境やストア名
+    venue: z.string().default(""),
+    // 使った技術・言語(例: ["Astro", "TypeScript"])
+    tech: z.array(z.string()).default([]),
+    tags: z.array(z.string()).default([]),
+    // src/assets/works/ 内のファイル名(例: image: "screenshot.png")
+    image: z.string().default(""),
+  }),
+});
+
+export const collections = { blog, works };

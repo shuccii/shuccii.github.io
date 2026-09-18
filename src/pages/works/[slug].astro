@@ -1,0 +1,184 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getCollection, render } from "astro:content";
+import { Image } from "astro:assets";
+import { getWorkImage } from "../../lib/media";
+
+// 本文のあるものだけ詳細ページを作る。本文が空の項目は一覧から直接リンク先へ飛ばす。
+export async function getStaticPaths() {
+  const works = await getCollection("works");
+  return works
+    .filter((work) => (work.body ?? "").trim().length > 0)
+    .map((work) => ({ params: { slug: work.id }, props: { work } }));
+}
+
+const { work } = Astro.props;
+const { Content } = await render(work);
+
+const d = work.data.date;
+const fmt = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+
+const labels: Record<string, string> = {
+  publication: "出版物",
+  app: "アプリ",
+  site: "Webサイト",
+};
+
+const thumbnail = getWorkImage(work.data.image);
+---
+
+<Layout
+  title={`${work.data.title} | Shuichi Tani`}
+  description={work.data.description}
+>
+  <article>
+    <header class="work-header">
+      <p class="meta">
+        <span class="kind">{labels[work.data.type]}</span>
+        <time datetime={d.toISOString().slice(0, 10)}>{fmt}</time>
+        {
+          work.data.tags.map((tag) => (
+            <a class="tag" href={`/search/?q=${encodeURIComponent(tag)}`}>
+              {tag}
+            </a>
+          ))
+        }
+      </p>
+      <h1>{work.data.title}</h1>
+      {work.data.venue && <p class="venue">{work.data.venue}</p>}
+      {work.data.description && <p class="lead">{work.data.description}</p>}
+      <p class="links">
+        {
+          work.data.url && (
+            <a href={work.data.url} target="_blank" rel="noopener noreferrer">
+              {work.data.type === "publication" ? "本文・DOI ↗" : "公開ページ ↗"}
+            </a>
+          )
+        }
+        {
+          work.data.repo && (
+            <a href={work.data.repo} target="_blank" rel="noopener noreferrer">
+              ソースコード ↗
+            </a>
+          )
+        }
+      </p>
+    </header>
+
+    {
+      thumbnail && (
+        <figure class="hero-shot glass">
+          <Image
+            src={thumbnail}
+            alt={`${work.data.title}の画面`}
+            width={1200}
+            loading="eager"
+          />
+        </figure>
+      )
+    }
+
+    {
+      work.data.tech.length > 0 && (
+        <p class="tech">
+          <span class="tech-label">使ったもの</span>
+          {work.data.tech.join(" / ")}
+        </p>
+      )
+    }
+
+    <div class="work-body">
+      <Content />
+    </div>
+
+    <p class="back"><a href="/works/">← 作ったもの一覧へ</a></p>
+  </article>
+</Layout>
+
+<style>
+  .work-header {
+    margin-bottom: 2rem;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .kind {
+    letter-spacing: 0.12em;
+    border: 1px solid var(--tag-border);
+    border-radius: 2rem;
+    padding: 0.05rem 0.6rem;
+    color: var(--tag-text);
+    background: var(--tag-bg);
+  }
+
+  .work-header h1 {
+    margin-bottom: 0.4rem;
+  }
+
+  .venue {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .lead {
+    max-width: 38em;
+    margin-bottom: 0.8rem;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .hero-shot {
+    --glass-radius: 14px;
+    margin: 0 0 2rem;
+    padding: 0.4rem;
+  }
+
+  .hero-shot :global(img) {
+    width: 100%;
+    height: auto;
+    border-radius: 11px;
+    display: block;
+  }
+
+  .tech {
+    font-size: 0.86rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .tech-label {
+    margin-right: 0.7rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .work-body {
+    max-width: 40em;
+  }
+
+  .work-body :global(h2) {
+    margin-top: 2.6rem;
+  }
+
+  .back {
+    margin-top: 3rem;
+    font-size: 0.9rem;
+  }
+</style>

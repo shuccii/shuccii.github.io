@@ -2,8 +2,15 @@ import { getCollection } from "astro:content";
 import site from "../data/site.json";
 
 // サイト内検索用のインデックス。ビルド時に静的な JSON として生成される。
+const workTypeLabels: Record<string, string> = {
+  publication: "出版物",
+  app: "アプリ",
+  site: "Webサイト",
+};
+
 export async function GET() {
   const posts = await getCollection("blog");
+  const works = await getCollection("works");
 
   const items = posts.map((post) => ({
     type: "ブログ",
@@ -13,6 +20,24 @@ export async function GET() {
     text: [post.data.description ?? "", post.body ?? ""].join(" ").slice(0, 6000),
     date: post.data.date.toISOString().slice(0, 10),
   }));
+
+  for (const work of works) {
+    const hasDetail = (work.body ?? "").trim().length > 0;
+    items.push({
+      type: "作ったもの",
+      title: work.data.title,
+      url: hasDetail ? `/works/${work.id}/` : "/works/",
+      tags: work.data.tags,
+      text: [
+        workTypeLabels[work.data.type] ?? "",
+        work.data.description ?? "",
+        work.data.venue,
+        work.data.tech.join(" "),
+        work.body ?? "",
+      ].join(" ").slice(0, 6000),
+      date: work.data.date.toISOString().slice(0, 10),
+    });
+  }
 
   items.push({
     type: "ページ",

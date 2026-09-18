@@ -30,6 +30,12 @@ const backgroundVideoModules = import.meta.glob<string>(
   { eager: true, query: "?url", import: "default" },
 );
 
+// src/assets/works/ の作品サムネイル(/works/ でのみ使う)
+const workImageModules = import.meta.glob<{ default: ImageMetadata }>(
+  "../assets/works/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP}",
+  { eager: true },
+);
+
 // src/assets/videos/ の動画のURL
 const videoUrlModules = import.meta.glob<string>(
   "../assets/videos/*.{mp4,webm,mov,MP4,WEBM,MOV}",
@@ -168,8 +174,8 @@ export function getTileMedia(): TileMedia[] {
   ];
 }
 
-// トップページの6項目は、背景専用フォルダ内の風景写真だけを使う。
-// 夜景 / 紅葉 / 夕景 / 花畑 / 庭園 / 都市風景を割り当て、似た景色が続かないようにする。
+// トップページの7項目は、背景専用フォルダ内の風景写真だけを使う。
+// 夜景 / 紅葉 / 夕景 / 花畑 / 庭園 / 都市風景 / 灯台を割り当て、似た景色が続かないようにする。
 const topPageTileFiles = [
   "IMG_0536.jpeg",
   "IMG_1400.JPG",
@@ -177,6 +183,7 @@ const topPageTileFiles = [
   "IMG_2943.JPG",
   "IMG_9900.jpeg",
   "bg-rainbow-bridge.jpg",
+  "_DSC0221.jpeg",
 ];
 
 export function getTopPageTileMedia(): TileMedia[] {
@@ -214,4 +221,13 @@ export async function getMediaPostMap(): Promise<Map<string, PostRef[]>> {
     }
   }
   return map;
+}
+
+// works の frontmatter に書かれたファイル名から、サムネイル画像を引き当てる。
+export function getWorkImage(file: string): ImageMetadata | null {
+  if (!file) return null;
+  const found = Object.entries(workImageModules).find(
+    ([path]) => fileName(path) === file,
+  );
+  return found ? found[1].default : null;
 }

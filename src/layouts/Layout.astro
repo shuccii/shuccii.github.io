@@ -23,6 +23,7 @@ const nav = [
   { href: "/music/", label: "MUSIC" },
   { href: "/profile/", label: "PROFILE" },
   { href: "/research/", label: "RESEARCH" },
+  { href: "/works/", label: "WORKS" },
   { href: "/feedback/", label: "VOICE" },
   { href: "/search/", label: "SEARCH" },
 ];
@@ -628,7 +629,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       const editables = () =>
         Array.from(document.querySelectorAll("[data-edit]"));
 
-      const contentAuthoringPage = ["/blog/", "/photos/", "/videos/"].includes(location.pathname);
+      const contentAuthoringPage = ["/blog/", "/photos/", "/videos/", "/works/"].includes(location.pathname);
 
       if (document.querySelector("[data-edit]") || contentAuthoringPage) {
         const bar = document.createElement("div");
@@ -642,7 +643,33 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         if (contentAuthoringPage) {
           const panel = document.createElement("section");
           panel.id = "content-editor";
-          panel.innerHTML = location.pathname === "/blog/"
+          const worksEditorMarkup = `
+              <h2 id="work-editor-heading">作ったものを追加</h2>
+              <p class="content-editor-note">出版物・アプリ・Webサイトを登録します。本文を書くと詳細ページが作られ、空にすると一覧からリンク先へ直接飛びます。</p>
+              <form id="work-publish-form">
+                <p id="work-editing-note" class="content-editor-note" hidden></p>
+                <label>種類<select name="type" required>
+                  <option value="publication">出版物・発表</option>
+                  <option value="app">アプリ・ツール</option>
+                  <option value="site">Webサイト</option>
+                </select></label>
+                <label>タイトル<input name="title" required maxlength="120" /></label>
+                <label>公開日・発表日<input name="date" type="date" required /></label>
+                <label>説明（一覧用）<input name="description" maxlength="200" /></label>
+                <label>掲載先・動作環境<input name="venue" maxlength="120" placeholder="雑誌名・学会名・ストア名など" /></label>
+                <label>公開ページ・DOIのURL<input name="url" type="url" placeholder="https://" /></label>
+                <label>ソースコードのURL<input name="repo" type="url" placeholder="https://github.com/..." /></label>
+                <label>使った技術（カンマ区切り）<input name="tech" placeholder="Python, scikit-learn" /></label>
+                <label>タグ（カンマ区切り）<input name="tags" placeholder="研究, 機械学習" /></label>
+                <label>本文（任意・Markdown）<textarea name="body" rows="10" placeholder="作った理由や仕組みを書くと詳細ページになります。"></textarea></label>
+                <button type="submit">登録する</button>
+                <button id="work-edit-cancel" type="button" hidden>新規登録に戻る</button>
+              </form>
+            `;
+
+          panel.innerHTML = location.pathname === "/works/"
+            ? worksEditorMarkup
+            : location.pathname === "/blog/"
             ? `
               <h2 id="blog-editor-heading">新しいブログ記事</h2>
               <p class="content-editor-note">本文はMarkdownで書けます。画像・動画を選ぶと、記事と一緒にアップロードされます。</p>
@@ -955,6 +982,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           return {
             title: text("title"), date: value("date"), description: text("description"), tags: array("tags"),
             photos: array("photos"), videos: array("videos"), body: matched?.[2]?.trim() ?? "",
+            type: text("type"), url: text("url"), repo: text("repo"), venue: text("venue"),
+            tech: array("tech"), image: text("image"),
           };
         };
 
@@ -1007,15 +1036,20 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           button.addEventListener("click", async () => {
             const path = button.dataset.blogPath ?? button.dataset.mediaPath;
             const isMedia = Boolean(button.dataset.mediaPath);
-            const message = isMedia
+            const message = button.dataset.deleteLabel ?? (isMedia
               ? "このファイルを削除しますか？ブログ記事からの参照も表示されなくなります。"
-              : "この記事を削除しますか？添付済みの写真・動画は削除されません。";
+              : "この記事を削除しますか？添付済みの写真・動画は削除されません。");
             if (!path || !confirm(message)) return;
             const token = getGithubToken();
             if (!token) return;
             button.disabled = true;
             try {
-              await deleteGithubFile(path, token, isMedia ? "content: delete media" : "content: delete blog post");
+              const what = isMedia
+                ? "content: delete media"
+                : path.startsWith("src/content/works/")
+                  ? "content: delete work"
+                  : "content: delete blog post";
+              await deleteGithubFile(path, token, what);
               button.textContent = "削除しました";
               setTimeout(() => location.reload(), 3500);
             } catch (error) {
@@ -1055,6 +1089,101 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             alert(error instanceof Error ? error.message : "記事の保存に失敗しました");
           } finally {
             setFormBusy(form, false, editingPost ? "変更を保存" : "記事を公開");
+          }
+        });
+
+        // 作ったもの（/works/）の登録・編集
+        let editingWork = null;
+        const workForm = document.querySelector("#work-publish-form");
+        const workHeading = document.querySelector("#work-editor-heading");
+        const workNote = document.querySelector("#work-editing-note");
+        const workCancel = document.querySelector("#work-edit-cancel");
+
+        const resetWorkForm = () => {
+          editingWork = null;
+          workForm?.reset();
+          const date = workForm?.querySelector('input[name="date"]');
+          if (date) date.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+          if (workHeading) workHeading.textContent = "作ったものを追加";
+          if (workNote) workNote.hidden = true;
+          if (workCancel) workCancel.hidden = true;
+          const submit = workForm?.querySelector('button[type="submit"]');
+          if (submit) submit.textContent = "登録する";
+        };
+
+        workCancel?.addEventListener("click", resetWorkForm);
+
+        document.querySelectorAll(".work-edit").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const token = getGithubToken();
+            const path = button.dataset.workPath;
+            if (!token || !path) return;
+            try {
+              const work = parseFrontmatter(await getGithubTextFile(path, token));
+              editingWork = { path, image: work.image };
+              const field = (name) => workForm.querySelector(`[name="${name}"]`);
+              field("type").value = ["publication", "app", "site"].includes(work.type) ? work.type : "app";
+              field("title").value = work.title;
+              field("date").value = work.date;
+              field("description").value = work.description;
+              field("venue").value = work.venue;
+              field("url").value = work.url;
+              field("repo").value = work.repo;
+              field("tech").value = work.tech.join(", ");
+              field("tags").value = work.tags.join(", ");
+              field("body").value = work.body;
+              workHeading.textContent = "登録内容を編集";
+              workNote.textContent = work.image ? `サムネイル: ${work.image}` : "サムネイル: なし";
+              workNote.hidden = false;
+              workCancel.hidden = false;
+              workForm.querySelector('button[type="submit"]').textContent = "変更を保存";
+              document.getElementById("content-editor")?.scrollTo({ top: 0, behavior: "smooth" });
+            } catch (error) {
+              alert(error instanceof Error ? error.message : "登録内容を読み込めませんでした");
+            }
+          });
+        });
+
+        workForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const fields = new FormData(form);
+          const read = (name) => String(fields.get(name) ?? "").trim();
+          const list = (name) => read(name).split(",").map((item) => item.trim()).filter(Boolean);
+          const title = read("title");
+          const date = read("date");
+          if (!title || !date) return;
+          const token = getGithubToken();
+          if (!token) return;
+          setFormBusy(form, true, editingWork ? "保存中…" : "登録中…");
+          try {
+            const slugBase = title.normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "") || "work";
+            const path = editingWork?.path ?? `src/content/works/${date}-${slugBase}-${Date.now().toString().slice(-6)}.md`;
+            const body = read("body");
+            const markdown = [
+              "---",
+              `title: ${JSON.stringify(title)}`,
+              `type: ${JSON.stringify(read("type") || "app")}`,
+              `date: ${date}`,
+              `description: ${JSON.stringify(read("description"))}`,
+              `url: ${JSON.stringify(read("url"))}`,
+              `repo: ${JSON.stringify(read("repo"))}`,
+              `venue: ${JSON.stringify(read("venue"))}`,
+              `tech: ${JSON.stringify(list("tech"))}`,
+              `tags: ${JSON.stringify(list("tags"))}`,
+              `image: ${JSON.stringify(editingWork?.image ?? "")}`,
+              "---",
+              "",
+              body ? `${body}\n` : "",
+            ].join("\n");
+            await putGithubFile(path, encodeBase64(markdown), token, editingWork ? "content: update work" : "content: add work");
+            const updated = Boolean(editingWork);
+            resetWorkForm();
+            showPublished(form, updated ? "✓ 変更をGitHubに保存しました。公開反映まで少し待ってください。" : "✓ GitHubに保存しました。公開反映まで少し待ってください。");
+          } catch (error) {
+            alert(error instanceof Error ? error.message : "登録に失敗しました");
+          } finally {
+            setFormBusy(form, false, editingWork ? "変更を保存" : "登録する");
           }
         });
       }
@@ -1399,9 +1528,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       0 -1px 0 rgba(255, 255, 255, 0.08) inset,
       0 12px 32px rgba(20, 30, 55, 0.14),
       0 3px 9px rgba(20, 30, 55, 0.08);
-    /* 透過は高く保ち、軽いぼかしで文字だけを読みやすくする。 */
-    backdrop-filter: blur(10px) saturate(1.06) contrast(1.04) brightness(1.06);
-    -webkit-backdrop-filter: blur(10px) saturate(1.06) contrast(1.04) brightness(1.06);
+    /* 透過は高く保ったまま、ブロックの下地だけ明暗の幅を狭める。
+       contrast() は中間の灰色へ寄せる働きなので、写真の暗い部分が
+       ブロックの下に来ても沈み込まず、黒い文字が読める明るさに残る。
+       彩度を上げて、平坦になった写真の色味を補う。 */
+    backdrop-filter: blur(10px) saturate(1.32) contrast(0.46) brightness(1.16);
+    -webkit-backdrop-filter: blur(10px) saturate(1.32) contrast(0.46)
+      brightness(1.16);
     transform: translate3d(var(--move-x), var(--move-y), 0)
       scale(var(--glass-scale));
     transition:
@@ -1479,6 +1612,87 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       inset 1px 1px 0 rgba(255, 255, 255, 0.22);
   }
 
+  /* ========================================
+     暗い写真のときのガラス
+     ----------------------------------------
+     明暗の判定は写真1枚の平均輝度なので、夕景のように上が明るく下が暗い
+     写真では「暗い」と判定されても、空に重なったブロックの下地は明るい。
+     そこでは白い文字がガラスの明るい面に沈んで読めなくなる。
+     文字を白へ反転させるページでは、ガラス自体も暗い側へ寄せて、
+     ブロックの中だけは写真のどこに重なっても白文字が読める明度に保つ。
+     透け感は残すため、不透明にはせず暗いティントと明度調整で合わせる。
+  ======================================== */
+  body.background-dark .glass {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(9, 16, 26, 0.2),
+        rgba(9, 16, 26, 0.12) 45%,
+        rgba(9, 16, 26, 0.16)
+      ),
+      rgba(8, 14, 24, 0.14);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.22) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.2) inset,
+      0 12px 32px rgba(3, 9, 18, 0.28),
+      0 3px 9px rgba(3, 9, 18, 0.16);
+    backdrop-filter: blur(11px) saturate(1.34) contrast(0.5) brightness(0.82);
+    -webkit-backdrop-filter: blur(11px) saturate(1.34) contrast(0.5)
+      brightness(0.82);
+  }
+
+  body.background-dark .glass:not(.glass-band):hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 18px 50px rgba(3, 9, 18, 0.36),
+      0 5px 14px rgba(3, 9, 18, 0.2);
+  }
+
+  /* 縁の光は残しつつ、明るい面が白文字を押し上げない程度まで弱める */
+  body.background-dark .glass::after {
+    border-color: rgba(255, 255, 255, 0.14);
+    background:
+      radial-gradient(
+        120% 70% at 50% -14%,
+        rgba(255, 255, 255, 0.1),
+        transparent 55%
+      ),
+      linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.07),
+        transparent 28%,
+        transparent 68%,
+        rgba(255, 255, 255, 0.03)
+      );
+    box-shadow:
+      inset 0 0 16px -8px rgba(255, 255, 255, 0.18),
+      inset 1px 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* ヘッダー・フッターの帯は写真のいちばん上下に重なる。空が入りやすい分だけ
+     濃いめに沈め、小さなナビの文字も読める明度にそろえる。 */
+  body.background-dark .glass-band,
+  body.background-dark .glass-band:hover,
+  body.background-dark .glass-band:active {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(9, 16, 26, 0.2),
+        rgba(9, 16, 26, 0.12) 45%,
+        rgba(9, 16, 26, 0.16)
+      ),
+      rgba(8, 14, 24, 0.26);
+    backdrop-filter: blur(12px) saturate(1.34) contrast(0.5) brightness(0.72);
+    -webkit-backdrop-filter: blur(12px) saturate(1.34) contrast(0.5)
+      brightness(0.72);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.22) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 6px 24px rgba(3, 9, 18, 0.24);
+  }
+
   /* ヘッダー・フッターなど全幅の帯: 変形させず、角丸と縦の境界線を消す */
   .glass-band,
   .glass-band:hover,
@@ -1516,6 +1730,21 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       0 14px 44px rgba(20, 30, 55, 0.16);
   }
 
+  body.background-dark .site-header[data-scrolled="true"] {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(9, 16, 26, 0.3),
+        rgba(9, 16, 26, 0.18) 45%,
+        rgba(9, 16, 26, 0.26)
+      ),
+      rgba(8, 14, 24, 0.22);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.24) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.2) inset,
+      0 14px 44px rgba(3, 9, 18, 0.32);
+  }
+
   /* コントラスト増加時はガラスをほぼ不透明にする */
   @media (prefers-contrast: more) {
     .glass {
@@ -1523,6 +1752,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       border: 2px solid currentColor;
       backdrop-filter: blur(30px);
       -webkit-backdrop-filter: blur(30px);
+    }
+
+    body.background-dark .glass {
+      background: rgba(14, 21, 30, 0.9);
     }
 
     .glass::before {
@@ -1537,6 +1770,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     -webkit-backdrop-filter: blur(34px);
   }
 
+  html[data-reduce-transparency="true"] body.background-dark .glass {
+    background: rgba(14, 21, 30, 0.92);
+  }
+
   html[data-reduce-transparency="true"] .glass::before {
     opacity: 0.12;
   }
@@ -1547,6 +1784,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   ) {
     .glass {
       background: rgba(248, 249, 250, 0.92);
+    }
+
+    body.background-dark .glass {
+      background: rgba(14, 21, 30, 0.92);
     }
   }
 
