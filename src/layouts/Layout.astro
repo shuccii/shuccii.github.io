@@ -197,7 +197,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     <!-- ページ遷移フェード -->
     <div id="page-fade" aria-hidden="true"></div>
 
-    <header class="site-header glass glass-band">
+    <header class="site-header glass glass-band nav-surface">
       <div class="container header-inner">
         <a href="/" class="site-title">
           <span class="site-title-ja">余白の庭</span>
@@ -241,7 +241,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           </ul>
         </nav>
       </div>
-      <nav class="mobile-nav glass" aria-label="モバイルナビゲーション">
+      <nav class="mobile-nav glass nav-surface" aria-label="モバイルナビゲーション">
         <ul>
           {
             nav.map((item) => (
@@ -1220,6 +1220,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --tile-description: #304658;
     --tile-muted: #40596d;
     --tile-accent: #13559a;
+    --nav-text: #25303b;
+    --nav-muted: #8a939e;
+    --nav-link: #4f5964;
+    --nav-active: #1e5aa8;
+    --nav-hover: #2f4f74;
     --tag-text: #1e5aa8;
     --tag-bg: rgba(30, 90, 168, 0.08);
     --tag-border: rgba(30, 90, 168, 0.18);
@@ -1232,7 +1237,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --spring: cubic-bezier(0.2, 0.85, 0.25, 1.18);
   }
 
-  /* 暗い写真では文字と文字影だけを反転させる。ガラス面や背景色は変えない。 */
+  /* 暗い写真では文字色と文字影を反転させる。固定面の背景は各コンポーネントで保つ。 */
   body.background-dark {
     --text: #f8fbff;
     --text-muted: rgba(247, 251, 255, 0.86);
@@ -1241,6 +1246,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     --tile-description: rgba(247, 251, 255, 0.92);
     --tile-muted: rgba(242, 248, 255, 0.9);
     --tile-accent: #e5f2ff;
+    --nav-text: #f8fbff;
+    --nav-muted: rgba(247, 251, 255, 0.78);
+    --nav-link: #f8fbff;
+    --nav-active: #ffffff;
+    --nav-hover: #ffffff;
     --tag-text: #f5fbff;
     --text-shadow: rgba(4, 12, 20, 0.86);
   }
@@ -1621,7 +1631,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
      そのため通常のガラスだけを暗い側へ寄せ、ブロック面はライト系のまま保つ。
      透け感は残すため、不透明にはせず暗いティントと明度調整で合わせる。
   ======================================== */
-  body.background-dark .glass:not(.block-surface) {
+  body.background-dark .glass:not(.block-surface):not(.nav-surface) {
     background:
       linear-gradient(
         135deg,
@@ -1641,7 +1651,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       brightness(0.82);
   }
 
-  body.background-dark .glass:not(.glass-band):not(.block-surface):hover {
+  body.background-dark .glass:not(.glass-band):not(.block-surface):not(.nav-surface):hover {
     border-color: rgba(255, 255, 255, 0.4);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.28) inset,
@@ -1650,7 +1660,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   /* 縁の光は残しつつ、明るい面が白文字を押し上げない程度まで弱める */
-  body.background-dark .glass:not(.block-surface)::after {
+  body.background-dark .glass:not(.block-surface):not(.nav-surface)::after {
     border-color: rgba(255, 255, 255, 0.14);
     background:
       radial-gradient(
@@ -1670,11 +1680,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       inset 1px 1px 0 rgba(255, 255, 255, 0.12);
   }
 
-  /* ヘッダー・フッターの帯は写真のいちばん上下に重なる。空が入りやすい分だけ
-     濃いめに沈め、小さなナビの文字も読める明度にそろえる。 */
-  body.background-dark .glass-band,
-  body.background-dark .glass-band:hover,
-  body.background-dark .glass-band:active {
+  /* フッターなどの帯は写真のいちばん上下に重なる。空が入りやすい分だけ
+     濃いめに沈める。ヘッダーとタブ面(nav-surface)はライト面のまま保つ。 */
+  body.background-dark .glass-band:not(.nav-surface),
+  body.background-dark .glass-band:not(.nav-surface):hover,
+  body.background-dark .glass-band:not(.nav-surface):active {
     background:
       linear-gradient(
         135deg,
@@ -1729,7 +1739,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       0 14px 44px rgba(20, 30, 55, 0.16);
   }
 
-  body.background-dark .site-header[data-scrolled="true"] {
+  body.background-dark .site-header[data-scrolled="true"]:not(.nav-surface) {
     background:
       linear-gradient(
         135deg,
@@ -1753,7 +1763,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       -webkit-backdrop-filter: blur(30px);
     }
 
-    body.background-dark .glass:not(.block-surface) {
+    body.background-dark .glass:not(.block-surface):not(.nav-surface) {
       background: rgba(14, 21, 30, 0.9);
     }
 
@@ -1769,7 +1779,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     -webkit-backdrop-filter: blur(34px);
   }
 
-  html[data-reduce-transparency="true"] body.background-dark .glass:not(.block-surface) {
+  html[data-reduce-transparency="true"] body.background-dark .glass:not(.block-surface):not(.nav-surface) {
     background: rgba(14, 21, 30, 0.92);
   }
 
@@ -1785,12 +1795,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       background: rgba(248, 249, 250, 0.92);
     }
 
-    body.background-dark .glass:not(.block-surface) {
+    body.background-dark .glass:not(.block-surface):not(.nav-surface) {
       background: rgba(14, 21, 30, 0.92);
     }
   }
 
-  /* Header */
+  /* Header。面はライト系で固定し、文字だけ --nav-* で明暗を切り替える。 */
   .site-header {
     position: sticky;
     top: 0;
@@ -1812,8 +1822,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
-    /* ヘッダーは明るいガラス面なので、背景写真の明暗に左右されない固定色にする */
-    color: #25303b;
+    /* ヘッダーの面は固定し、文字色だけ背景写真の明暗に合わせて切り替える */
+    color: var(--nav-text);
   }
 
   .site-title-ja {
@@ -1827,8 +1837,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     font-size: 0.56rem;
     letter-spacing: 0.34em;
     text-transform: uppercase;
-    /* ヘッダー帯は常に白いので、背景の明暗に連動させず固定色にする */
-    color: #8a939e;
+    /* ヘッダー帯の面は固定し、補助文字だけ明暗を切り替える */
+    color: var(--nav-muted);
   }
 
   .site-title:hover {
@@ -1846,14 +1856,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   .site-header nav a {
-    color: #4f5964;
+    color: var(--nav-link);
     font-size: 0.76rem;
     letter-spacing: 0.18em;
   }
 
   .site-header nav a:hover,
   .site-header nav a.active {
-    color: #1e5aa8;
+    color: var(--nav-active);
     text-decoration: none;
   }
 
@@ -2177,7 +2187,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       scrollbar-width: none;
       scroll-snap-type: x proximity;
       scroll-padding-inline: 0.28rem;
-      color: #303a45;
+      color: var(--nav-text);
     }
 
     .mobile-nav::-webkit-scrollbar {
@@ -2206,7 +2216,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       padding: 0.42rem 0.68rem;
       border: 1px solid transparent;
       border-radius: 0.72rem;
-      color: #4f5964;
+      color: var(--nav-link);
       font-size: 0.7rem;
       font-weight: 600;
       letter-spacing: 0.09em;
@@ -2215,13 +2225,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     }
 
     .site-header .mobile-nav a:hover {
-      color: #2f4f74;
+      color: var(--nav-hover);
       text-decoration: none;
       background: rgba(255, 255, 255, 0.22);
     }
 
     .site-header .mobile-nav a.active {
-      color: #1e5aa8;
+      color: var(--nav-active);
       text-decoration: none;
       background:
         linear-gradient(

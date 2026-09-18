@@ -433,18 +433,13 @@ const blocks = await Promise.all(
 
   .block-text {
     --glass-radius: 20px;
-    --tile-text: #14222f;
-    --tile-description: #304658;
-    --tile-muted: #40596d;
-    --tile-accent: #13559a;
-    --text-shadow: rgba(255, 255, 255, 0.84);
     z-index: 1;
     display: flex;
     flex-direction: column;
     width: 44%;
     margin-bottom: clamp(1.5rem, 3.5vw, 3rem);
     padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1.5rem, 3vw, 2.6rem);
-    /* 項目ブロックは写真を十分に透かし、文字は影と濃色で判読性を保つ。 */
+    /* 項目ブロックは写真を十分に透かし、文字色と影だけをテーマに合わせる。 */
     background:
       linear-gradient(
         135deg,
@@ -504,9 +499,9 @@ const blocks = await Promise.all(
   /* とくに背景写真の影響を受けやすいBLOGブロックは文字の輪郭を強める。 */
   .block[data-block="blog"] .block-text {
     text-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.94),
-      0 2px 12px rgba(255, 255, 255, 0.76),
-      0 3px 12px rgba(10, 26, 44, 0.28);
+      0 1px 0 var(--text-shadow),
+      0 2px 12px var(--text-shadow),
+      0 3px 12px color-mix(in srgb, var(--text) 28%, transparent);
   }
 
   .block[data-block="blog"] .block-en,
@@ -514,9 +509,9 @@ const blocks = await Promise.all(
   .block[data-block="blog"] .block-desc,
   .block[data-block="blog"] .block-more {
     text-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.94),
-      0 2px 10px rgba(255, 255, 255, 0.72),
-      0 2px 8px rgba(10, 26, 44, 0.22);
+      0 1px 0 var(--text-shadow),
+      0 2px 10px var(--text-shadow),
+      0 2px 8px color-mix(in srgb, var(--text) 22%, transparent);
   }
 
   .block:hover .block-more {
