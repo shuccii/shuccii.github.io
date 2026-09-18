@@ -100,7 +100,7 @@ const blocks = await Promise.all(
               ) : null
             }
           </span>
-          <span class="block-text glass">
+          <span class="block-text block-surface glass">
             <span class="block-en">{block.en}</span>
             <span class="block-ja">{block.ja}</span>
             <span class="block-desc" data-edit={`home.sec${block.en}`}>
@@ -459,43 +459,6 @@ const blocks = await Promise.all(
     color: var(--tile-text);
     text-shadow: 0 1px 14px var(--text-shadow);
     transition: color 300ms ease;
-  }
-
-  /* ホームのブロック面は背景テーマに左右されない固定のガラス色にする。 */
-  body.background-dark .block-text {
-    background:
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.16),
-        rgba(255, 255, 255, 0.025) 45%,
-        rgba(255, 255, 255, 0.07)
-      ),
-      rgba(255, 255, 255, 0.025);
-    border-color: rgba(255, 255, 255, 0.58);
-    backdrop-filter: blur(9px) saturate(1.12) contrast(1.06) brightness(1.08);
-    -webkit-backdrop-filter: blur(9px) saturate(1.12) contrast(1.06)
-      brightness(1.08);
-  }
-
-  /* 暗いテーマ用の共通ガラス縁も、ブロック面だけは明るい面のまま保つ。 */
-  body.background-dark .block-text::after {
-    border-color: rgba(255, 255, 255, 0.24);
-    background:
-      radial-gradient(
-        120% 70% at 50% -14%,
-        rgba(255, 255, 255, 0.2),
-        transparent 55%
-      ),
-      linear-gradient(
-        150deg,
-        rgba(255, 255, 255, 0.12),
-        transparent 28%,
-        transparent 68%,
-        rgba(255, 255, 255, 0.055)
-      );
-    box-shadow:
-      inset 0 0 16px -8px rgba(255, 255, 255, 0.34),
-      inset 1px 1px 0 rgba(255, 255, 255, 0.22);
   }
 
   .block:nth-child(odd) .block-text {

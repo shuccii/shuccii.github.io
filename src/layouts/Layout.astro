@@ -1614,16 +1614,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   /* ========================================
-     暗い写真のときのガラス
+     暗い写真のときのガラス(ホームのブロック面を除く)
      ----------------------------------------
      明暗の判定は写真1枚の平均輝度なので、夕景のように上が明るく下が暗い
-     写真では「暗い」と判定されても、空に重なったブロックの下地は明るい。
-     そこでは白い文字がガラスの明るい面に沈んで読めなくなる。
-     文字を白へ反転させるページでは、ガラス自体も暗い側へ寄せて、
-     ブロックの中だけは写真のどこに重なっても白文字が読める明度に保つ。
+     写真では「暗い」と判定されても、通常のカードの下地は明るい場合がある。
+     そのため通常のガラスだけを暗い側へ寄せ、ブロック面はライト系のまま保つ。
      透け感は残すため、不透明にはせず暗いティントと明度調整で合わせる。
   ======================================== */
-  body.background-dark .glass {
+  body.background-dark .glass:not(.block-surface) {
     background:
       linear-gradient(
         135deg,
@@ -1643,7 +1641,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       brightness(0.82);
   }
 
-  body.background-dark .glass:not(.glass-band):hover {
+  body.background-dark .glass:not(.glass-band):not(.block-surface):hover {
     border-color: rgba(255, 255, 255, 0.4);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.28) inset,
@@ -1652,7 +1650,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   }
 
   /* 縁の光は残しつつ、明るい面が白文字を押し上げない程度まで弱める */
-  body.background-dark .glass::after {
+  body.background-dark .glass:not(.block-surface)::after {
     border-color: rgba(255, 255, 255, 0.14);
     background:
       radial-gradient(
@@ -1755,7 +1753,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       -webkit-backdrop-filter: blur(30px);
     }
 
-    body.background-dark .glass {
+    body.background-dark .glass:not(.block-surface) {
       background: rgba(14, 21, 30, 0.9);
     }
 
@@ -1771,7 +1769,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     -webkit-backdrop-filter: blur(34px);
   }
 
-  html[data-reduce-transparency="true"] body.background-dark .glass {
+  html[data-reduce-transparency="true"] body.background-dark .glass:not(.block-surface) {
     background: rgba(14, 21, 30, 0.92);
   }
 
@@ -1787,7 +1785,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       background: rgba(248, 249, 250, 0.92);
     }
 
-    body.background-dark .glass {
+    body.background-dark .glass:not(.block-surface) {
       background: rgba(14, 21, 30, 0.92);
     }
   }
