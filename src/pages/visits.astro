@@ -271,16 +271,32 @@ import Layout from "../layouts/Layout.astro";
     font-size: 0.82rem;
     color: var(--text-muted);
   }
+  /* 入力欄の背景は明暗どちらの背景でも白のままなので、文字色は --text(暗い
+     写真では白に反転する)ではなく、この欄専用の濃い色で固定する。 */
   .visits-form input,
   .visits-form select {
+    --field-bg: rgba(255, 255, 255, 0.92);
+    --field-text: #18232e;
     min-width: 220px;
     padding: 0.55rem 0.7rem;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.86);
-    color: var(--text);
+    background: var(--field-bg);
+    color: var(--field-text);
     font: inherit;
     font-size: 0.9rem;
+  }
+  .visits-form input::placeholder {
+    color: rgba(24, 35, 46, 0.55);
+  }
+  .visits-form option {
+    background: #ffffff;
+    color: #18232e;
+  }
+  .visits-form input:focus-visible,
+  .visits-form select:focus-visible {
+    outline: 2px solid #456d50;
+    outline-offset: 2px;
   }
   .visits-form select {
     min-width: 150px;

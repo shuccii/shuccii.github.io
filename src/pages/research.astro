@@ -15,13 +15,18 @@ import site from "../data/site.json";
   <p data-edit="research.bg1">{site.research.bg1}</p>
   <p data-edit="research.bg2">{site.research.bg2}</p>
   <p data-edit="research.bg3">{site.research.bg3}</p>
+  <p class="note">
+    <span class="note-mark">※</span>
+    <span data-edit="research.note">{site.research.note}</span>
+    <a
+      href={site.research.noteHref}
+      target="_blank"
+      rel="noopener noreferrer">DOI ↗</a
+    >
+  </p>
 
   <h2><span class="en">Topics</span>取り組んでいる課題</h2>
-  <ul>
-    <li data-edit="research.task1">{site.research.task1}</li>
-    <li data-edit="research.task2">{site.research.task2}</li>
-    <li data-edit="research.task3">{site.research.task3}</li>
-  </ul>
+  <p data-edit="research.task1">{site.research.task1}</p>
 
   <h2><span class="en">Keywords</span>キーワード</h2>
   <p class="hint">キーワードをクリックすると、サイト内の関連ページ・記事を検索できます。</p>
@@ -53,6 +58,22 @@ import site from "../data/site.json";
   .lead {
     font-size: 1.05rem;
     max-width: 38em;
+  }
+
+  .note {
+    font-size: 0.82rem;
+    line-height: 1.85;
+    color: var(--text-muted);
+    max-width: 38em;
+    margin-top: 1.6rem;
+  }
+
+  .note-mark {
+    margin-right: 0.15em;
+  }
+
+  .note a {
+    white-space: nowrap;
   }
 
   .hint {
