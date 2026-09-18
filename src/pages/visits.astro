@@ -23,6 +23,7 @@ import Layout from "../layouts/Layout.astro";
     <label>
       <span>期間</span>
       <select name="days">
+        <option value="1">過去24時間</option>
         <option value="7">過去7日</option>
         <option value="30" selected>過去30日</option>
         <option value="90">過去90日</option>
@@ -92,6 +93,9 @@ import Layout from "../layouts/Layout.astro";
   const when = (value: string | null | undefined) =>
     value ? dateFormat.format(new Date(value)) : "—";
 
+  /** 期間の見出し: 1日だけは「過去24時間」と書いたほうが分かりやすい */
+  const periodLabel = (days: number) => (days === 1 ? "過去24時間" : `過去${days}日`);
+
   function table(
     caption: string,
     head: string[],
@@ -126,7 +130,7 @@ import Layout from "../layouts/Layout.astro";
     );
 
     result.innerHTML = [
-      `<p class="visits-total">過去${report.days}日で <strong>${total}</strong> 回の閲覧</p>`,
+      `<p class="visits-total">${periodLabel(report.days)}で <strong>${total}</strong> 回の閲覧</p>`,
       table(
         "国別",
         ["国", "回数", "割合"],
