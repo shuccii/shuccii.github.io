@@ -439,18 +439,7 @@ const blocks = await Promise.all(
     width: 44%;
     margin-bottom: clamp(1.5rem, 3.5vw, 3rem);
     padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1.5rem, 3vw, 2.6rem);
-    /* 項目ブロックは写真を十分に透かし、文字色と影だけをテーマに合わせる。 */
-    background:
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.16),
-        rgba(255, 255, 255, 0.025) 45%,
-        rgba(255, 255, 255, 0.07)
-      ),
-      rgba(255, 255, 255, 0.025);
-    border-color: rgba(255, 255, 255, 0.58);
-    backdrop-filter: blur(9px) saturate(1.12) contrast(1.06) brightness(1.08);
-    -webkit-backdrop-filter: blur(9px) saturate(1.12) contrast(1.06) brightness(1.08);
+    /* 共通の明るいガラス面を使い、暗い写真でも面を沈ませない。 */
     color: var(--tile-text);
     text-shadow: 0 1px 14px var(--text-shadow);
     transition: color 300ms ease;
