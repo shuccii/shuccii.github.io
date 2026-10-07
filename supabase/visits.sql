@@ -1,3 +1,4 @@
+-- 先に write-limits.sql を適用してください。
 -- 地域別アクセスログ(国 / 都道府県 / 市区町村)
 -- Supabase Dashboard > SQL Editor で comments.sql・private-feedback.sql の後に実行してください。
 --
@@ -79,6 +80,10 @@ begin
     return;
   end if;
 
+  if p_client_key is null then return; end if;
+  if not site_private.allow_site_write('visit') then return; end if;
+
+  -- ブラウザUUIDによる補助制御。全体予算は上で別途検査する。
   -- 1時間あたり120件まで。連投・いたずらでテーブルが膨らむのを防ぐ。
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_client_hash, 1));
   delete from public.site_visit_rate_limits
@@ -133,8 +138,7 @@ begin
     select 1 from public.site_admin_keys
     where name = 'visits' and key_hash = v_hash
   ) then
-    -- 総当たりを遅くするための待ち時間
-    perform pg_sleep(1);
+    -- DB接続を占有する待機は行わない。長い管理用合言葉を使う。
     raise exception '合言葉が違います';
   end if;
 

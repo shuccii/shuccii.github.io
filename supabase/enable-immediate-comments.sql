@@ -1,3 +1,4 @@
+-- 先に write-limits.sql を適用してください。
 -- 既に comments.sql を適用済みのSupabaseプロジェクト向け更新。
 -- Dashboard > SQL Editor で一度だけ実行してください。
 
@@ -66,6 +67,14 @@ begin
       and status = 'approved'
   ) then
     raise exception '返信先のコメントが見つかりません';
+  end if;
+
+  if not site_private.allow_site_write('comment') then
+    raise exception '投稿が混み合っています。時間を置いてからお試しください';
+  end if;
+
+  if (select count(*) from public.site_comments where page_id = p_page_id) >= 500 then
+    raise exception 'この記事のコメント受付は上限に達しました';
   end if;
 
   insert into public.site_comments (

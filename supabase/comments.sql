@@ -1,3 +1,4 @@
+-- 先に write-limits.sql を適用してください。
 -- 匿名コメント・返信・記事ごとのGOOD機能
 -- Supabase Dashboard > SQL Editor でこのファイルを一度だけ実行してください。
 
@@ -59,7 +60,8 @@ as $$
   where p_page_id ~ '^blog/[[:alnum:]ぁ-んァ-ヶ一-龠々ー%._-]+$'
     and c.page_id = p_page_id
     and c.status = 'approved'
-  order by c.created_at asc;
+  order by c.created_at asc, c.id
+  limit 500;
 $$;
 
 create or replace function public.submit_site_comment(
@@ -121,6 +123,14 @@ begin
     raise exception '返信先のコメントが見つかりません';
   end if;
 
+  if not site_private.allow_site_write('comment') then
+    raise exception '投稿が混み合っています。時間を置いてからお試しください';
+  end if;
+
+  if (select count(*) from public.site_comments where page_id = p_page_id) >= 500 then
+    raise exception 'この記事のコメント受付は上限に達しました';
+  end if;
+
   insert into public.site_comments (
     page_id,
     author_name,
@@ -175,12 +185,20 @@ begin
     raise exception 'このページにはGOODできません';
   end if;
 
+  if p_voter_key is null then raise exception 'GOODの識別子が正しくありません'; end if;
+  if not site_private.allow_site_write('like') then
+    raise exception 'GOODが混み合っています。時間を置いてからお試しください';
+  end if;
+
   delete from public.site_likes
   where page_id = p_page_id and voter_key = p_voter_key;
 
   if found then
     is_liked := false;
   else
+    if (select count(*) from public.site_likes) >= 100000 then
+      raise exception 'GOODの受付が混み合っています。時間を置いてからお試しください';
+    end if;
     insert into public.site_likes (page_id, voter_key)
     values (p_page_id, p_voter_key);
     is_liked := true;

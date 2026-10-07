@@ -1,3 +1,4 @@
+-- 先に write-limits.sql を適用してください。
 -- 管理者だけが読める非公開の意見ボックス
 -- Supabase Dashboard > SQL Editor で comments.sql の後に実行してください。
 
@@ -52,6 +53,12 @@ declare
   blocked_terms text[] := array['死ね', '殺す', '消えろ', '個人情報晒し', '住所特定'];
   blocked_term text;
 begin
+  if p_client_key is null then raise exception '送信識別子が正しくありません'; end if;
+  -- 全体予算が主制御。以下のUUID上限は通常ブラウザ向けの補助制御。
+  if not site_private.allow_site_write('feedback') then
+    raise exception '意見の受付が混み合っています。時間を置いてからお試しください';
+  end if;
+
   -- 同じブラウザからの同時送信を直列化し、1時間5件までに制限する。
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_client_hash, 0));
   delete from public.site_feedback_rate_limits
