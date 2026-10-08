@@ -4,14 +4,14 @@ import Layout from "../layouts/Layout.astro";
 
 <Layout
   title="アクセスの記録 | Shuichi Tani"
-  description="サイトが開かれた地域(国・都道府県・市区町村)を確認する管理用ページです。"
+  description="サイトの閲覧状況(地域・参照元・端末・再訪・滞在時間)を確認する管理用ページです。"
   noindex={true}
 >
   <header class="visits-header">
     <p class="eyebrow">ACCESS</p>
     <h1>アクセスの記録</h1>
     <p class="lead">
-      サイトが開かれた地域(国・都道府県・市区町村)を確認できます。合言葉を知っている人だけが表示できます。
+      地域・参照元・端末・回線・再訪・滞在時間を確認できます。合言葉を知っている人だけが表示できます。
     </p>
   </header>
 
@@ -55,11 +55,28 @@ import Layout from "../layouts/Layout.astro";
     visits?: number;
     last_seen?: string | null;
     created_at?: string | null;
+    referrer_host?: string | null;
+    device?: string | null;
+    browser?: string | null;
+    os?: string | null;
+    language?: string | null;
+    network?: string | null;
+    asn?: number | null;
+    is_landing?: boolean | null;
+    is_returning?: boolean | null;
+    duration_seconds?: number | null;
   };
 
   type Report = {
     days: number;
     total: number;
+    sessions?: { total: number; returning: number; new: number };
+    avg_duration?: number | null;
+    referrers?: Row[];
+    devices?: Row[];
+    browsers?: Row[];
+    languages?: Row[];
+    networks?: Row[];
     countries: Row[];
     regions: Row[];
     cities: Row[];
@@ -92,6 +109,24 @@ import Layout from "../layouts/Layout.astro";
 
   const when = (value: string | null | undefined) =>
     value ? dateFormat.format(new Date(value)) : "—";
+
+  const DEVICE_LABEL: Record<string, string> = {
+    mobile: "スマートフォン",
+    tablet: "タブレット",
+    desktop: "パソコン",
+  };
+  const deviceLabel = (value: string | null | undefined) =>
+    value ? (DEVICE_LABEL[value] ?? value) : "—";
+
+  /** 秒数を「3分12秒」の形にする */
+  const duration = (seconds: number | null | undefined) => {
+    if (seconds === null || seconds === undefined) return "—";
+    const s = Math.round(seconds);
+    return s < 60 ? `${s}秒` : `${Math.floor(s / 60)}分${s % 60}秒`;
+  };
+
+  const returningLabel = (row: Row) =>
+    row.is_returning === true ? "再訪" : row.is_returning === false ? "新規" : "—";
 
   /** 期間の見出し: 1日だけは「過去24時間」と書いたほうが分かりやすい */
   const periodLabel = (days: number) => (days === 1 ? "過去24時間" : `過去${days}日`);
@@ -129,8 +164,70 @@ import Layout from "../layouts/Layout.astro";
       (row) => (row.country_code ?? "").toUpperCase() === "JP",
     );
 
+    const sessions = report.sessions ?? { total: 0, returning: 0, new: 0 };
+    const sessionShare = (count: number) =>
+      sessions.total > 0 ? `${((count / sessions.total) * 100).toFixed(1)}%` : "—";
+
     result.innerHTML = [
       `<p class="visits-total">${periodLabel(report.days)}で <strong>${total}</strong> 回の閲覧</p>`,
+      table(
+        "概要",
+        ["項目", "値"],
+        [
+          ["訪問(セッション)数", String(sessions.total)],
+          ["新規の訪問", `${sessions.new}(${sessionShare(sessions.new)})`],
+          ["再訪", `${sessions.returning}(${sessionShare(sessions.returning)})`],
+          ["1ページあたりの平均滞在時間", duration(report.avg_duration)],
+        ],
+        "まだ記録がありません。",
+      ),
+      table(
+        "参照元(どこから来たか)",
+        ["参照元", "訪問数", "割合"],
+        (report.referrers ?? []).map((row) => [
+          row.referrer_host ?? "直接・不明(ブックマーク、URL直打ち、アプリ内など)",
+          String(row.visits ?? 0),
+          sessionShare(row.visits ?? 0),
+        ]),
+        "まだ記録がありません。",
+      ),
+      table(
+        "端末",
+        ["端末", "回数", "割合"],
+        (report.devices ?? []).map((row) => [
+          deviceLabel(row.device),
+          String(row.visits ?? 0),
+          share(row.visits ?? 0),
+        ]),
+        "まだ記録がありません。",
+      ),
+      table(
+        "ブラウザ・OS",
+        ["ブラウザ", "OS", "回数"],
+        (report.browsers ?? []).map((row) => [
+          row.browser ?? "不明",
+          row.os ?? "不明",
+          String(row.visits ?? 0),
+        ]),
+        "まだ記録がありません。",
+      ),
+      table(
+        "回線の提供元(大学・企業・プロバイダ)",
+        ["提供元", "AS番号", "回数", "最後の閲覧"],
+        (report.networks ?? []).map((row) => [
+          row.network ?? "不明",
+          row.asn ? `AS${row.asn}` : "—",
+          String(row.visits ?? 0),
+          when(row.last_seen),
+        ]),
+        "まだ記録がありません。",
+      ),
+      table(
+        "言語",
+        ["言語", "回数"],
+        (report.languages ?? []).map((row) => [row.language ?? "不明", String(row.visits ?? 0)]),
+        "まだ記録がありません。",
+      ),
       table(
         "国別",
         ["国", "回数", "割合"],
@@ -170,7 +267,7 @@ import Layout from "../layouts/Layout.astro";
       ),
       table(
         "直近の閲覧",
-        ["日時", "ページ", "場所"],
+        ["日時", "ページ", "場所", "回線", "端末", "参照元", "新規/再訪", "滞在"],
         report.recent.map((row) => {
           const place = [
             toJapaneseCountry(row.country_code, row.country ?? null),
@@ -179,13 +276,24 @@ import Layout from "../layouts/Layout.astro";
           ]
             .filter((part): part is string => Boolean(part))
             .join(" / ");
-          return [when(row.created_at), row.page_path ?? "—", place || "不明"];
+          return [
+            when(row.created_at),
+            row.page_path ?? "—",
+            place || "不明",
+            row.network ?? "—",
+            [deviceLabel(row.device), row.browser].filter((part) => part && part !== "—").join(" / ") || "—",
+            row.is_landing ? (row.referrer_host ?? "直接") : "サイト内",
+            returningLabel(row),
+            duration(row.duration_seconds),
+          ];
         }),
         "まだ記録がありません。",
       ),
       `<p class="visits-note">
-        地域は IP アドレスからのおおよその判定です。携帯回線や社内ネットワークでは、
+        地域と回線の提供元は IP アドレスからのおおよその判定です。携帯回線や社内ネットワークでは、
         実際の場所と離れた県・市が出ることがあります。IP アドレス自体は保存していません。
+        再訪は同じブラウザで以前の別セッションにも開いたかどうかで、端末やブラウザが変わると新規として数えます。
+        訪問数・参照元・新規/再訪は、この機能を追加した後の記録だけが対象です。
       </p>`,
     ].join("");
     result.removeAttribute("hidden");

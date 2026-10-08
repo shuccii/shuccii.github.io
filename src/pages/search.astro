@@ -82,7 +82,7 @@ import Layout from "../layouts/Layout.astro";
           <span class="type">${escapeHtml(item.type)}</span>
           ${item.date ? `<time>${escapeHtml(item.date)}</time>` : ""}
         </p>
-        <a class="title" href="${item.url}">${escapeHtml(item.title)}</a>
+        <a class="title" href="${escapeHtml(item.url)}">${escapeHtml(item.title)}</a>
         <p class="snippet">${snippet(item.text, q)}</p>
         ${
           item.tags.length
@@ -101,11 +101,17 @@ import Layout from "../layouts/Layout.astro";
 
   async function init() {
     status.textContent = "検索インデックスを読み込み中…";
-    const res = await fetch("/search-index.json");
-    index = await res.json();
+    try {
+      const res = await fetch("/search-index.json", { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error("検索インデックスを取得できませんでした");
+      index = await res.json();
+    } catch {
+      status.textContent = "検索データを読み込めませんでした。ページを再読み込みしてお試しください。";
+      return;
+    }
     status.textContent = "";
 
-    const q = new URLSearchParams(location.search).get("q") ?? "";
+    const q = input.value || new URLSearchParams(location.search).get("q") || "";
     if (q) {
       input.value = q;
       search(q);

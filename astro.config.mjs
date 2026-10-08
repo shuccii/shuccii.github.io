@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 import fs from "node:fs";
 import path from "node:path";
+import { applySiteEdits } from "./src/lib/site-edits";
 
 const SITE_JSON = path.resolve("./src/data/site.json");
 const SECRET_FILE = path.resolve("./.edit-secret");
@@ -11,6 +12,7 @@ const SECRET_FILE = path.resolve("./.edit-secret");
 // 書き換えたテキストを src/data/site.json に書き戻す。
 // .edit-secret に書かれたパスワードを知っている本人だけが保存できる。
 // 本番ビルド(静的サイト)には含まれない。
+/** @returns {import("vite").Plugin} */
 function editApi() {
   return {
     name: "edit-api",
@@ -33,25 +35,31 @@ function editApi() {
           return;
         }
 
-        let body = "";
-        req.on("data", (chunk) => (body += chunk));
+        /** @type {Buffer[]} */
+        const chunks = [];
+        let bytes = 0;
+        let rejected = false;
+        req.on("data", /** @param {Buffer} chunk */ (chunk) => {
+          if (rejected) return;
+          bytes += chunk.length;
+          if (bytes > 256 * 1024) {
+            rejected = true;
+            chunks.length = 0;
+            res.statusCode = 413;
+            res.setHeader("Content-Type", "application/json");
+            res.end('{"ok":false,"error":"payload too large"}');
+            return;
+          }
+          chunks.push(chunk);
+        });
         req.on("end", () => {
+          if (rejected) return;
           try {
+            const body = Buffer.concat(chunks).toString("utf-8");
             const changes = JSON.parse(body);
             const data = JSON.parse(fs.readFileSync(SITE_JSON, "utf-8"));
-            for (const [key, value] of Object.entries(changes)) {
-              if (typeof value !== "string") continue;
-              const parts = key.split(".");
-              let obj = data;
-              for (let i = 0; i < parts.length - 1; i++) {
-                obj = obj?.[parts[i]];
-              }
-              // site.json に既に存在するテキスト項目だけを上書きする
-              if (obj && typeof obj[parts[parts.length - 1]] === "string") {
-                obj[parts[parts.length - 1]] = value;
-              }
-            }
-            fs.writeFileSync(SITE_JSON, JSON.stringify(data, null, 2) + "\n");
+            const updated = applySiteEdits(data, changes);
+            fs.writeFileSync(SITE_JSON, JSON.stringify(updated, null, 2) + "\n");
             res.setHeader("Content-Type", "application/json");
             res.end('{"ok":true}');
           } catch (e) {

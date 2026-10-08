@@ -49,8 +49,8 @@ export async function GET() {
       site.research.bg1,
       site.research.bg2,
       site.research.task1,
-      site.research.task2,
-      site.research.task3,
+      site.research.bg3,
+      site.research.note,
     ].join(" "),
     date: "",
   });

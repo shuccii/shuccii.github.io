@@ -61,12 +61,12 @@ const embedOrigins = [
 // Supabaseの接続先は自分のプロジェクト1ホストだけに限定する。
 // ワイルドカード(https://*.supabase.co)だと、万一スクリプトを注入された場合に
 // 攻撃者が用意した別のSupabaseプロジェクトへデータを送り出せてしまう。
-// 環境変数が未設定のビルドでコメント欄が壊れないよう、その場合だけ従来の値に戻す。
+// 接続設定がない場合はRPCも無効なので、外部接続先を追加しない。
 const supabaseConnectSrc = (() => {
   try {
     return new URL(import.meta.env.PUBLIC_SUPABASE_URL).origin;
   } catch {
-    return "https://*.supabase.co";
+    return "";
   }
 })();
 
@@ -333,189 +333,40 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       </div>
     </footer>
 
-    <script define:vars={{ bgMedia }} is:inline>
-      // 背景(写真・動画)のランダムクロスフェード
-      (() => {
-        if (!bgMedia || bgMedia.length === 0) return;
-        const layers = [
-          document.getElementById("bg-a"),
-          document.getElementById("bg-b"),
-        ];
-        // HTMLに埋め込んだ軽量な初期背景を表示したまま、裏側へ次の背景を読む。
-        // これにより、各ページを開いた直後に背景が空白になる時間をなくす。
-        let showing = 1;
-        let lastIndex = -1;
-        let firstDisplay = true;
-
-        const applyBackgroundTone = (brightness) => {
-          const dark = brightness < 145;
-          // 背景写真はそのまま見せ、明暗に応じて文字色だけを切り替える。
-          document.body.classList.toggle("background-dark", dark);
-          document.body.classList.toggle("background-light", !dark);
-        };
-
-        const brightnessFromElement = (element) => {
-          try {
-            const canvas = document.createElement("canvas");
-            const side = 32;
-            canvas.width = side;
-            canvas.height = side;
-            const context = canvas.getContext("2d", { willReadFrequently: true });
-            if (!context) return 150;
-            context.drawImage(element, 0, 0, side, side);
-            const pixels = context.getImageData(0, 0, side, side).data;
-            let total = 0;
-            for (let i = 0; i < pixels.length; i += 4) {
-              total += pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722;
-            }
-            return total / (pixels.length / 4);
-          } catch {
-            return 150;
-          }
-        };
-
-        const pick = () => {
-          // 初回だけは軽い写真から選び、前回の初期背景を避ける。
-          // これにより、リロードしても同じ見た目が続きにくい。
-          const previousInitial = firstDisplay
-            ? localStorage.getItem("lastInitialBackground")
-            : null;
-          const candidates = bgMedia
-            .map((media, index) => ({ media, index }))
-            .filter(
-              ({ media, index }) =>
-                index !== lastIndex &&
-                (!firstDisplay || (media.type === "image" && media.id !== previousInitial)),
-            );
-          const pool = candidates.length > 0
-            ? candidates
-            : bgMedia
-              .map((media, index) => ({ media, index }))
-              .filter(({ media, index }) => index !== lastIndex && (!firstDisplay || media.type === "image"));
-          const random = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
-          return pool[Math.floor(random * pool.length)].index;
-        };
-
-        const setMedia = (layer, media, onReady, onFailure) => {
-          layer.innerHTML = "";
-          layer.style.backgroundImage = "";
-          if (media.type === "image") {
-            const img = new Image();
-            img.onload = () => {
-              layer.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
-              applyBackgroundTone(media.brightness);
-              onReady();
-            };
-            img.onerror = onFailure;
-            img.src = matchMedia("(max-width: 1024px)").matches
-              ? media.mobileUrl
-              : media.url;
-          } else {
-            const v = document.createElement("video");
-            let settled = false;
-            // 高画質動画でも低速回線で先頭フレームを待てるよう余裕を持たせる
-            const timeout = window.setTimeout(() => finish(false), 45000);
-            const finish = (ready) => {
-              if (settled) return;
-              settled = true;
-              window.clearTimeout(timeout);
-              if (!ready) {
-                v.remove();
-                onFailure();
-                return;
-              }
-              applyBackgroundTone(brightnessFromElement(v));
-              onReady();
-            };
-
-            v.muted = true;
-            v.defaultMuted = true;
-            v.loop = true;
-            v.playsInline = true;
-            v.autoplay = true;
-            // 初期表示では写真のみ選ぶため、後続動画はメタデータだけ先に読む。
-            v.preload = "metadata";
-            v.setAttribute("muted", "");
-            v.setAttribute("playsinline", "");
-            v.setAttribute("webkit-playsinline", "");
-            v.src = media.url;
-            v.addEventListener(
-              "loadeddata",
-              () => {
-                v.play().then(() => finish(true)).catch(() => finish(false));
-              },
-              { once: true },
-            );
-            v.addEventListener("error", () => finish(false), { once: true });
-            layer.appendChild(v);
-            v.load();
-          }
-        };
-
-        const swap = () => {
-          const i = pick();
-          lastIndex = i;
-          const layer = layers[showing];
-          setMedia(
-            layer,
-            bgMedia[i],
-            () => {
-              if (firstDisplay) {
-                localStorage.setItem("lastInitialBackground", bgMedia[i].id ?? bgMedia[i].url);
-              }
-              layer.style.opacity = "1";
-              const other = layers[1 - showing];
-              other.style.opacity = "0";
-              // 裏に回った動画は停止してリソースを解放
-              const oldVideo = other.querySelector("video");
-              if (oldVideo) setTimeout(() => oldVideo.pause(), 2600);
-              showing = 1 - showing;
-              if (bgMedia.length > 1) {
-                // 動画は長め、写真は9秒で次へ
-                const wait = firstDisplay
-                  ? 15000
-                  : bgMedia[i].type === "video"
-                    ? 22000
-                    : 9000;
-                firstDisplay = false;
-                setTimeout(swap, wait);
-              }
-            },
-            () => {
-              // 読み込めないメディアがあってもスライドショーを止めない
-              setTimeout(swap, 250);
-            },
-          );
-        };
-
-        swap();
-      })();
+    <script id="background-media" type="application/json" set:html={JSON.stringify(bgMedia).replace(/</g, "\\u003c")} />
+    <script>
+      import { initializeBackground } from "../lib/background";
+      initializeBackground();
     </script>
 
     <script>
       // カードのわずかな追従移動。光の位置はカーソルに連動させない。
       {
-        const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
         const attachMotion = (target: Element, glass: HTMLElement) => {
           let raf = 0;
-
+          let pointerX = 0;
+          let pointerY = 0;
+          const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
           target.addEventListener("pointermove", (event) => {
-            if (reduceMotion) return;
             const pointer = event as PointerEvent;
-            const rect = glass.getBoundingClientRect();
-            const x = Math.min(1, Math.max(0, (pointer.clientX - rect.left) / rect.width));
-            const y = Math.min(1, Math.max(0, (pointer.clientY - rect.top) / rect.height));
-
-            cancelAnimationFrame(raf);
+            if (motionPreference.matches || pointer.pointerType === "touch") return;
+            pointerX = pointer.clientX;
+            pointerY = pointer.clientY;
+            if (raf) return;
             raf = requestAnimationFrame(() => {
+              raf = 0;
+              const rect = glass.getBoundingClientRect();
+              if (!rect.width || !rect.height) return;
+              const x = Math.min(1, Math.max(0, (pointerX - rect.left) / rect.width));
+              const y = Math.min(1, Math.max(0, (pointerY - rect.top) / rect.height));
               glass.style.setProperty("--move-x", `${(x - 0.5) * 4}px`);
               glass.style.setProperty("--move-y", `${(y - 0.5) * 4}px`);
             });
-          });
+          }, { passive: true });
 
           const reset = () => {
             cancelAnimationFrame(raf);
+            raf = 0;
             glass.style.setProperty("--move-x", "0px");
             glass.style.setProperty("--move-y", "0px");
             glass.classList.remove("is-pressed");
@@ -524,23 +375,28 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           target.addEventListener("pointerleave", reset);
           target.addEventListener("pointercancel", reset);
           target.addEventListener("pointerdown", () => {
-            if (!reduceMotion) glass.classList.add("is-pressed");
+            if (!motionPreference.matches) glass.classList.add("is-pressed");
           });
           target.addEventListener("pointerup", () => glass.classList.remove("is-pressed"));
         };
 
+        const selector = ".glass:not(.glass-band):not([data-motion-ready])";
         const initializeMotion = (root: ParentNode = document) => {
-          root
-            .querySelectorAll<HTMLElement>(".glass:not(.glass-band):not([data-motion-ready])")
-            .forEach((glass) => {
-              glass.dataset.motionReady = "true";
-              attachMotion(glass.closest("[data-glass-area]") ?? glass, glass);
-            });
+          const glasses = Array.from(root.querySelectorAll<HTMLElement>(selector));
+          if (root instanceof HTMLElement && root.matches(selector)) glasses.unshift(root);
+          for (const glass of glasses) {
+            glass.dataset.motionReady = "true";
+            attachMotion(glass.closest("[data-glass-area]") ?? glass, glass);
+          }
         };
 
         initializeMotion();
         new MutationObserver((entries) => {
-          if (entries.some((entry) => entry.addedNodes.length > 0)) initializeMotion();
+          for (const entry of entries) {
+            for (const node of entry.addedNodes) {
+              if (node instanceof HTMLElement) initializeMotion(node);
+            }
+          }
         }).observe(document.body, { childList: true, subtree: true });
       }
     </script>
@@ -548,6 +404,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     <script>
       // 内部リンクのページ遷移フェード + タイルのクリックエフェクト
       const fade = document.getElementById("page-fade")!;
+      let navigating = false;
       document.addEventListener("click", (e) => {
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
         if (
@@ -560,17 +417,24 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         )
           return;
         if (document.body.classList.contains("editing")) return;
-        const a = (e.target as HTMLElement).closest("a");
-        if (!a || a.target === "_blank" || a.origin !== location.origin) return;
-        if (a.pathname === location.pathname && a.hash) return;
+        const a = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
+        if (!a || a.hasAttribute("download") || (a.target && a.target !== "_self") ||
+            !["http:", "https:"].includes(a.protocol) || a.origin !== location.origin) return;
+        if (a.pathname === location.pathname && a.search === location.search && a.hash) return;
         e.preventDefault();
+        if (navigating) return;
+        navigating = true;
         const tile = a.closest(".tile, .block");
         if (tile) tile.classList.add("leaving");
         fade.classList.add("on");
         setTimeout(() => (location.href = a.href), 340);
       });
       // 戻るボタンで復帰したときにフェードを解除
-      window.addEventListener("pageshow", () => fade.classList.remove("on"));
+      window.addEventListener("pageshow", () => {
+        navigating = false;
+        fade.classList.remove("on");
+        document.querySelectorAll(".leaving").forEach((tile) => tile.classList.remove("leaving"));
+      });
     </script>
 
     <script>
@@ -602,7 +466,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       const glassHeader = document.querySelector<HTMLElement>(".site-header");
       if (glassHeader) {
         const updateGlassHeader = () => {
-          glassHeader.dataset.scrolled = window.scrollY > 24 ? "true" : "false";
+          const scrolled = window.scrollY > 24 ? "true" : "false";
+          if (glassHeader.dataset.scrolled !== scrolled) glassHeader.dataset.scrolled = scrolled;
         };
         window.addEventListener("scroll", updateGlassHeader, { passive: true });
         updateGlassHeader();
@@ -625,10 +490,12 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     </script>
 
     <script>
+      import { applySiteEdits } from "../lib/site-edits";
+      import { readStorage, writeStorage, removeStorage } from "../lib/storage";
       // 編集モード。開発時はローカルAPI、本番(GitHub Pages)ではGitHub Contents APIを使う。
       // GitHubのトークンはlocalStorageへ保存せず、タブを閉じると消えるsessionStorageだけに保持する。
       const editables = () =>
-        Array.from(document.querySelectorAll("[data-edit]"));
+        Array.from(document.querySelectorAll<HTMLElement>("[data-edit]"));
 
       const contentAuthoringPage = ["/blog/", "/photos/", "/videos/", "/works/"].includes(location.pathname);
 
@@ -695,49 +562,48 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               </form>
             `;
           document.body.appendChild(panel);
-          const dateInput = panel.querySelector('input[name="date"]');
+          const dateInput = panel.querySelector<HTMLInputElement>('input[name="date"]');
           if (dateInput) {
             dateInput.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
           }
         }
 
-        const toggleBtn = bar.querySelector("#edit-toggle");
-        const cancelBtn = bar.querySelector("#edit-cancel");
+        const toggleBtn = bar.querySelector<HTMLButtonElement>("#edit-toggle")!;
+        const cancelBtn = bar.querySelector<HTMLButtonElement>("#edit-cancel")!;
         let editing = false;
-        const original = new Map();
+        const original = new Map<HTMLElement, string>();
         const isDev = import.meta.env.DEV;
         const tokenKey = "githubEditToken";
         const githubFile = "src/data/site.json";
         const githubApi = "https://api.github.com/repos/shuccii/shuccii.github.io/contents/";
 
-        const getToken = () => {
-          if (isDev) {
-            let token = sessionStorage.getItem("editToken");
-            if (!token) {
-              token = prompt("編集パスワードを入力してください");
-              if (token) sessionStorage.setItem("editToken", token);
-            }
-            return token;
-          }
-          let token = sessionStorage.getItem(tokenKey);
-          if (!token) {
-            token = prompt("GitHub fine-grained PATを入力してください\n(repoのContents: Read and write権限が必要です)");
-            if (token) sessionStorage.setItem(tokenKey, token);
+        const tokens = new Map<string, string>();
+        const requestToken = (key: string, message: string) => {
+          let token = tokens.get(key) ?? readStorage("session", key);
+          if (!token) token = prompt(message);
+          if (token) {
+            tokens.set(key, token);
+            writeStorage("session", key, token);
           }
           return token;
         };
+        const getGithubToken = () => requestToken(tokenKey,
+          "GitHub fine-grained PATを入力してください\n(repoのContents: Read and write権限が必要です)");
+        const getToken = () => isDev
+          ? requestToken("editToken", "編集パスワードを入力してください")
+          : getGithubToken();
 
-        const authHeaders = (token) => ({
+        const authHeaders = (token: string) => ({
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${token}`,
           "X-GitHub-Api-Version": "2022-11-28",
         });
 
-        const encodeBase64 = (value) => {
+        const encodeBase64 = (value: string) => {
           return encodeBytesBase64(new TextEncoder().encode(value));
         };
 
-        const encodeBytesBase64 = (bytes) => {
+        const encodeBytesBase64 = (bytes: Uint8Array) => {
           let binary = "";
           for (let i = 0; i < bytes.length; i += 0x8000) {
             binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -745,18 +611,9 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           return btoa(binary);
         };
 
-        const githubUrl = (path) => `${githubApi}${path.split("/").map(encodeURIComponent).join("/")}`;
+        const githubUrl = (path: string) => `${githubApi}${path.split("/").map(encodeURIComponent).join("/")}`;
 
-        const getGithubToken = () => {
-          let token = sessionStorage.getItem(tokenKey);
-          if (!token) {
-            token = prompt("GitHub fine-grained PATを入力してください\n(repoのContents: Read and write権限が必要です)");
-            if (token) sessionStorage.setItem(tokenKey, token);
-          }
-          return token;
-        };
-
-        const putGithubFile = async (path, content, token, message) => {
+        const putGithubFile = async (path: string, content: string, token: string, message: string) => {
           const url = githubUrl(path);
           for (let attempt = 0; attempt < 2; attempt++) {
             const existing = await fetch(`${url}?ref=main&cacheBust=${Date.now()}`, {
@@ -778,7 +635,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           }
         };
 
-        const getGithubTextFile = async (path, token) => {
+        const getGithubTextFile = async (path: string, token: string) => {
           const response = await fetch(`${githubUrl(path)}?ref=main&cacheBust=${Date.now()}`, {
             headers: authHeaders(token), cache: "no-store",
           });
@@ -789,7 +646,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           );
         };
 
-        const deleteGithubFile = async (path, token, message) => {
+        const deleteGithubFile = async (path: string, token: string, message: string) => {
           const url = githubUrl(path);
           for (let attempt = 0; attempt < 2; attempt++) {
             const existing = await fetch(`${url}?ref=main&cacheBust=${Date.now()}`, {
@@ -809,14 +666,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           }
         };
 
-        const mediaType = (file) => {
+        const mediaType = (file: File) => {
           const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
           if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) return "photo";
           if (["mp4", "webm", "mov"].includes(ext)) return "video";
           return null;
         };
 
-        const uploadMedia = async (file, token) => {
+        const uploadMedia = async (file: File, token: string) => {
           const kind = mediaType(file);
           if (!kind) throw new Error(`${file.name} は対応していない形式です`);
           if (file.size > 50 * 1024 * 1024) throw new Error(`${file.name} は50MBを超えています`);
@@ -827,7 +684,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           return { kind, name };
         };
 
-        const saveToGithub = async (changes, token) => {
+        const saveToGithub = async (changes: Record<string, string>, token: string) => {
           const url = `${githubApi}${githubFile}`;
           for (let attempt = 0; attempt < 2; attempt++) {
             const fileRes = await fetch(`${url}?ref=main&cacheBust=${Date.now()}`, {
@@ -842,20 +699,13 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             const data = JSON.parse(new TextDecoder().decode(
               Uint8Array.from(atob(file.content.replace(/\n/g, "")), (char) => char.charCodeAt(0)),
             ));
-            for (const [key, value] of Object.entries(changes)) {
-              const parts = key.split(".");
-              let obj = data;
-              for (let i = 0; i < parts.length - 1; i++) obj = obj?.[parts[i]];
-              if (obj && typeof obj[parts[parts.length - 1]] === "string") {
-                obj[parts[parts.length - 1]] = value;
-              }
-            }
+            const updated = applySiteEdits(data, changes);
             const updateRes = await fetch(url, {
               method: "PUT",
               headers: { ...authHeaders(token), "Content-Type": "application/json" },
               body: JSON.stringify({
                 message: "content: update site text",
-                content: encodeBase64(`${JSON.stringify(data, null, 2)}\n`),
+                content: encodeBase64(`${JSON.stringify(updated, null, 2)}\n`),
                 sha: file.sha,
                 branch: "main",
               }),
@@ -868,7 +718,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           }
         };
 
-        const setEditing = (on) => {
+        const setEditing = (on: boolean) => {
           editing = on;
           document.body.classList.toggle("editing", on);
           toggleBtn.textContent = on ? "保存" : "✎ 編集";
@@ -886,18 +736,20 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             if (getToken()) setEditing(true);
             return;
           }
-          const changes = {};
+          const changes: Record<string, string> = {};
           for (const el of editables()) {
             const value = (el.textContent ?? "").trim();
-            if (value !== (original.get(el) ?? "").trim()) changes[el.dataset.edit] = value;
+            if (value !== (original.get(el) ?? "").trim()) changes[el.dataset.edit!] = value;
           }
           if (Object.keys(changes).length === 0) {
             setEditing(false);
             return;
           }
           toggleBtn.textContent = "保存中…";
+          toggleBtn.disabled = true;
+          cancelBtn.disabled = true;
           try {
-            const token = sessionStorage.getItem(isDev ? "editToken" : tokenKey) ?? "";
+            const token = tokens.get(isDev ? "editToken" : tokenKey) ?? readStorage("session", isDev ? "editToken" : tokenKey) ?? "";
             if (isDev) {
               const res = await fetch("/__edit", {
                 method: "POST",
@@ -915,10 +767,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
             setTimeout(() => (toggleBtn.textContent = "✎ 編集"), 5000);
           } catch (error) {
             if (String(error).includes("401") || String(error).includes("パスワード")) {
-              sessionStorage.removeItem(isDev ? "editToken" : tokenKey);
+              tokens.delete(isDev ? "editToken" : tokenKey);
+              removeStorage("session", isDev ? "editToken" : tokenKey);
             }
             toggleBtn.textContent = "保存に失敗";
             alert(`${error instanceof Error ? error.message : "保存に失敗しました"}\nトークンの権限と有効期限を確認してください。`);
+          } finally {
+            toggleBtn.disabled = false;
+            cancelBtn.disabled = false;
           }
         });
 
@@ -927,24 +783,26 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           setEditing(false);
         });
 
-        const setFormBusy = (form, busy, label) => {
-          const button = form.querySelector('button[type="submit"]');
+        const setFormBusy = (form: HTMLFormElement, busy: boolean, label: string) => {
+          const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+          if (!button) return;
           button.disabled = busy;
           button.textContent = label;
         };
 
-        const showPublished = (form, message) => {
+        const showPublished = (form: HTMLFormElement, message: string) => {
           const notice = document.createElement("p");
           notice.className = "content-editor-success";
           notice.textContent = message;
           form.appendChild(notice);
         };
 
-        const mediaForm = document.querySelector("#media-upload-form");
+        const mediaForm = document.querySelector<HTMLFormElement>("#media-upload-form");
         mediaForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.currentTarget;
-          const input = form.querySelector('input[name="media"]');
+          if (!(form instanceof HTMLFormElement)) return;
+          const input = form.querySelector<HTMLInputElement>('input[name="media"]')!;
           const files = Array.from(input.files ?? []);
           if (files.length === 0) return;
           const kind = form.dataset.kind;
@@ -966,17 +824,17 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           }
         });
 
-        const parseFrontmatter = (markdown) => {
+        const parseFrontmatter = (markdown: string) => {
           const matched = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
           const frontmatter = matched?.[1] ?? "";
-          const value = (key) => frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim() ?? "";
-          const array = (key) => {
+          const value = (key: string) => frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim() ?? "";
+          const array = (key: string): string[] => {
             const raw = value(key);
             try { return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []; } catch {
               return raw.replace(/^\[|\]$/g, "").split(",").map((item) => item.trim()).filter(Boolean);
             }
           };
-          const text = (key) => {
+          const text = (key: string) => {
             const raw = value(key);
             try { return String(JSON.parse(raw)); } catch { return raw.replace(/^['"]|['"]$/g, ""); }
           };
@@ -988,44 +846,44 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           };
         };
 
-        let editingPost = null;
-        const blogForm = document.querySelector("#blog-publish-form");
-        const blogHeading = document.querySelector("#blog-editor-heading");
-        const blogNote = document.querySelector("#blog-editing-note");
-        const blogCancel = document.querySelector("#blog-edit-cancel");
+        let editingPost: { path: string; photos: string[]; videos: string[] } | null = null;
+        const blogForm = document.querySelector<HTMLFormElement>("#blog-publish-form");
+        const blogHeading = document.querySelector<HTMLElement>("#blog-editor-heading");
+        const blogNote = document.querySelector<HTMLElement>("#blog-editing-note");
+        const blogCancel = document.querySelector<HTMLButtonElement>("#blog-edit-cancel");
 
         const resetBlogForm = () => {
           editingPost = null;
           blogForm?.reset();
-          const date = blogForm?.querySelector('input[name="date"]');
+          const date = blogForm?.querySelector<HTMLInputElement>('input[name="date"]')!;
           if (date) date.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
           if (blogHeading) blogHeading.textContent = "新しいブログ記事";
           if (blogNote) blogNote.hidden = true;
           if (blogCancel) blogCancel.hidden = true;
-          const submit = blogForm?.querySelector('button[type="submit"]');
+          const submit = blogForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
           if (submit) submit.textContent = "記事を公開";
         };
 
         blogCancel?.addEventListener("click", resetBlogForm);
 
-        document.querySelectorAll(".blog-edit").forEach((button) => {
+        document.querySelectorAll<HTMLButtonElement>(".blog-edit").forEach((button) => {
           button.addEventListener("click", async () => {
             const token = getGithubToken();
             const path = button.dataset.blogPath;
-            if (!token || !path) return;
+            if (!token || !path || !blogForm || !blogHeading || !blogNote || !blogCancel) return;
             try {
               const post = parseFrontmatter(await getGithubTextFile(path, token));
               editingPost = { path, photos: post.photos, videos: post.videos };
-              blogForm.querySelector('input[name="title"]').value = post.title;
-              blogForm.querySelector('input[name="date"]').value = post.date;
-              blogForm.querySelector('input[name="description"]').value = post.description;
-              blogForm.querySelector('input[name="tags"]').value = post.tags.join(", ");
-              blogForm.querySelector('textarea[name="body"]').value = post.body;
+              blogForm.querySelector<HTMLInputElement>('input[name="title"]')!.value = post.title;
+              blogForm.querySelector<HTMLInputElement>('input[name="date"]')!.value = post.date;
+              blogForm.querySelector<HTMLInputElement>('input[name="description"]')!.value = post.description;
+              blogForm.querySelector<HTMLInputElement>('input[name="tags"]')!.value = post.tags.join(", ");
+              blogForm.querySelector<HTMLTextAreaElement>('textarea[name="body"]')!.value = post.body;
               blogHeading.textContent = "ブログ記事を編集";
               blogNote.textContent = `添付済み: ${[...post.photos, ...post.videos].join(", ") || "なし"}`;
               blogNote.hidden = false;
               blogCancel.hidden = false;
-              blogForm.querySelector('button[type="submit"]').textContent = "変更を保存";
+              blogForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.textContent = "変更を保存";
               document.getElementById("content-editor")?.scrollTo({ top: 0, behavior: "smooth" });
             } catch (error) {
               alert(error instanceof Error ? error.message : "記事を読み込めませんでした");
@@ -1033,7 +891,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
           });
         });
 
-        document.querySelectorAll(".blog-delete, .media-delete").forEach((button) => {
+        document.querySelectorAll<HTMLButtonElement>(".blog-delete, .media-delete").forEach((button) => {
           button.addEventListener("click", async () => {
             const path = button.dataset.blogPath ?? button.dataset.mediaPath;
             const isMedia = Boolean(button.dataset.mediaPath);
@@ -1063,13 +921,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         blogForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.currentTarget;
+          if (!(form instanceof HTMLFormElement)) return;
           const fields = new FormData(form);
           const title = String(fields.get("title") ?? "").trim();
           const date = String(fields.get("date") ?? "");
           const description = String(fields.get("description") ?? "").trim();
           const body = String(fields.get("body") ?? "").trim();
           const tags = String(fields.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
-          const files = Array.from(form.querySelector('input[name="media"]').files ?? []);
+          const files = Array.from(form.querySelector<HTMLInputElement>('input[name="media"]')!.files ?? []);
           if (!title || !date || !body) return;
           const token = getGithubToken();
           if (!token) return;
@@ -1094,35 +953,35 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         });
 
         // 作ったもの（/works/）の登録・編集
-        let editingWork = null;
-        const workForm = document.querySelector("#work-publish-form");
-        const workHeading = document.querySelector("#work-editor-heading");
-        const workNote = document.querySelector("#work-editing-note");
-        const workCancel = document.querySelector("#work-edit-cancel");
+        let editingWork: { path: string; image: string } | null = null;
+        const workForm = document.querySelector<HTMLFormElement>("#work-publish-form");
+        const workHeading = document.querySelector<HTMLElement>("#work-editor-heading");
+        const workNote = document.querySelector<HTMLElement>("#work-editing-note");
+        const workCancel = document.querySelector<HTMLButtonElement>("#work-edit-cancel");
 
         const resetWorkForm = () => {
           editingWork = null;
           workForm?.reset();
-          const date = workForm?.querySelector('input[name="date"]');
+          const date = workForm?.querySelector<HTMLInputElement>('input[name="date"]')!;
           if (date) date.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
           if (workHeading) workHeading.textContent = "作ったものを追加";
           if (workNote) workNote.hidden = true;
           if (workCancel) workCancel.hidden = true;
-          const submit = workForm?.querySelector('button[type="submit"]');
+          const submit = workForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
           if (submit) submit.textContent = "登録する";
         };
 
         workCancel?.addEventListener("click", resetWorkForm);
 
-        document.querySelectorAll(".work-edit").forEach((button) => {
+        document.querySelectorAll<HTMLButtonElement>(".work-edit").forEach((button) => {
           button.addEventListener("click", async () => {
             const token = getGithubToken();
             const path = button.dataset.workPath;
-            if (!token || !path) return;
+            if (!token || !path || !workForm || !workHeading || !workNote || !workCancel) return;
             try {
               const work = parseFrontmatter(await getGithubTextFile(path, token));
               editingWork = { path, image: work.image };
-              const field = (name) => workForm.querySelector(`[name="${name}"]`);
+              const field = (name: string) => workForm.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${name}"]`)!;
               field("type").value = ["publication", "app", "site"].includes(work.type) ? work.type : "app";
               field("title").value = work.title;
               field("date").value = work.date;
@@ -1137,7 +996,7 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
               workNote.textContent = work.image ? `サムネイル: ${work.image}` : "サムネイル: なし";
               workNote.hidden = false;
               workCancel.hidden = false;
-              workForm.querySelector('button[type="submit"]').textContent = "変更を保存";
+              workForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.textContent = "変更を保存";
               document.getElementById("content-editor")?.scrollTo({ top: 0, behavior: "smooth" });
             } catch (error) {
               alert(error instanceof Error ? error.message : "登録内容を読み込めませんでした");
@@ -1148,9 +1007,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
         workForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.currentTarget;
+          if (!(form instanceof HTMLFormElement)) return;
           const fields = new FormData(form);
-          const read = (name) => String(fields.get(name) ?? "").trim();
-          const list = (name) => read(name).split(",").map((item) => item.trim()).filter(Boolean);
+          const read = (name: string) => String(fields.get(name) ?? "").trim();
+          const list = (name: string) => read(name).split(",").map((item) => item.trim()).filter(Boolean);
           const title = read("title");
           const date = read("date");
           if (!title || !date) return;
@@ -1194,12 +1054,14 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     <VisitLogger />
 
     <!-- Cloudflare Web Analytics -->
-    <script
-      type="module"
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token":"9d0ab7a9ea5545c4907a9b53b4082f5e"}'
-      fetchpriority="low"
-    ></script>
+    {!import.meta.env.DEV && (
+      <script
+        type="module"
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon='{"token":"9d0ab7a9ea5545c4907a9b53b4082f5e"}'
+        fetchpriority="low"
+      ></script>
+    )}
     <!-- End Cloudflare Web Analytics -->
   </body>
 </html>
@@ -1285,6 +1147,10 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   body > .site-footer {
     width: 100%;
     min-width: 0;
+  }
+
+  body.background-paused .bg-layer {
+    animation-play-state: paused;
   }
 
   /* 写真・動画背景(ゆっくりズームするKen Burnsエフェクト付き) */
@@ -1379,6 +1245,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
   @media (prefers-reduced-motion: reduce) {
     .bg-layer {
       animation: none;
+      transition: none;
+      will-change: auto;
     }
 
     .reveal {

@@ -90,10 +90,19 @@ const {
 </section>
 
 <script>
+  import { readStorage, writeStorage } from "../lib/storage";
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_KEY =
     import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  interface CommentRow {
+    id: string;
+    parent_id: string | null;
+    author_name: string;
+    body: string;
+    created_at: string;
+  }
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat("ja-JP", {
@@ -149,12 +158,12 @@ const {
 
     submit.disabled = false;
     if (likeButton) likeButton.disabled = false;
-    author.value = localStorage.getItem("comment-author-name") || "";
+    author.value = readStorage("local", "comment-author-name") || "";
 
-    let voterKey = localStorage.getItem("site-like-voter-key");
+    let voterKey = readStorage("local", "site-like-voter-key");
     if (!voterKey) {
       voterKey = crypto.randomUUID();
-      localStorage.setItem("site-like-voter-key", voterKey);
+      writeStorage("local", "site-like-voter-key", voterKey);
     }
 
     const clearReply = () => {
@@ -183,7 +192,7 @@ const {
       list.replaceChildren();
       try {
         const comments = await callRpc("get_site_comments", { p_page_id: pageId });
-        const rows = Array.isArray(comments) ? comments : [];
+        const rows: CommentRow[] = Array.isArray(comments) ? comments : [];
         if (commentCount) commentCount.textContent = `${rows.length}件`;
 
         if (rows.length === 0) {
@@ -196,13 +205,14 @@ const {
 
         const roots = rows.filter((row) => !row.parent_id);
         const replies = new Map<string, typeof rows>();
-        rows.filter((row) => row.parent_id).forEach((row) => {
+        rows.forEach((row) => {
+          if (!row.parent_id) return;
           const current = replies.get(row.parent_id) || [];
           current.push(row);
           replies.set(row.parent_id, current);
         });
 
-        const renderComment = (row, isReply = false) => {
+        const renderComment = (row: CommentRow, isReply = false) => {
           const article = document.createElement("article");
           article.className = isReply ? "comment comment-reply" : "comment";
 
@@ -272,6 +282,8 @@ const {
         if (likeCount) likeCount.textContent = String(state?.like_count ?? 0);
         likeButton.classList.toggle("liked", Boolean(state?.liked));
         likeButton.setAttribute("aria-pressed", String(Boolean(state?.liked)));
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : "GOODを更新できませんでした。";
       } finally {
         likeButton.disabled = false;
       }
@@ -291,7 +303,7 @@ const {
           p_body: String(data.get("body") || ""),
           p_parent_id: parentInput.value || null,
         });
-        localStorage.setItem("comment-author-name", author.value.trim());
+        writeStorage("local", "comment-author-name", author.value.trim());
         textarea.value = "";
         if (count) count.textContent = "0 / 1000";
         clearReply();

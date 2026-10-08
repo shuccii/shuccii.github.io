@@ -31,6 +31,7 @@
 </section>
 
 <script>
+  import { readStorage, writeStorage } from "../lib/storage";
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_KEY =
     import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
@@ -73,10 +74,10 @@
       return;
     }
     submit.disabled = false;
-    let clientKey = localStorage.getItem("private-feedback-client-key");
+    let clientKey = readStorage("local", "private-feedback-client-key");
     if (!clientKey) {
       clientKey = crypto.randomUUID();
-      localStorage.setItem("private-feedback-client-key", clientKey);
+      writeStorage("local", "private-feedback-client-key", clientKey);
     }
 
     form.addEventListener("submit", async (event) => {

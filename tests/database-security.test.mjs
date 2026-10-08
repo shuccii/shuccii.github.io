@@ -137,3 +137,33 @@ test('single-transaction upgrade matches canonical SQL and applies to an existin
   for (let i=1;i<10;i++) await comment(db);
   await assert.rejects(comment(db), /混み合って/);
 });
+
+test('visit details, returning flag and duration are stored only in sanitized form and read only with the key', async (t) => {
+  const db = await database(t);
+  const detailed = (key, landing, returning, referrer = 'www.google.com') =>
+    rpc(db, 'anon', 'select record_site_visit($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) as token',
+      ['/', 'Japan', 'JP', 'Nara', '29', 'Ikoma', key, referrer, 'mobile', 'Safari', 'iOS', 'ja', 'Example Net', 64512, landing, returning]);
+  const first = (await detailed(randomUUID(), true, false)).rows[0].token;
+  await detailed(randomUUID(), true, true);
+  await detailed(randomUUID(), false, true, 'https://evil.example/path?q=1');
+  assert.match(first, /^[0-9a-f-]{36}$/);
+  const stored = (await db.query("select referrer_host from site_visits order by id")).rows.map((row) => row.referrer_host);
+  assert.deepEqual(stored, ['www.google.com', 'www.google.com', null]);
+
+  await rpc(db, 'anon', 'select update_site_visit_duration($1, $2)', [first, 42]);
+  await rpc(db, 'anon', 'select update_site_visit_duration($1, $2)', [first, 10]);
+  await rpc(db, 'anon', 'select update_site_visit_duration($1, $2)', [randomUUID(), 99]);
+  assert.equal(await count(db, 'site_visits'), 3);
+  assert.equal(Number((await db.query('select max(duration_seconds) as d from site_visits')).rows[0].d), 42);
+  await db.exec("update site_visits set created_at = now() - interval '7 hours'");
+  await rpc(db, 'anon', 'select update_site_visit_duration($1, $2)', [first, 500]);
+  assert.equal(Number((await db.query('select max(duration_seconds) as d from site_visits')).rows[0].d), 42);
+  await db.exec("update site_visits set created_at = now()");
+
+  await db.query(`insert into site_admin_keys(name,key_hash) values ('visits', encode(extensions.digest($1,'sha256'),'hex'))`, ['local-test-passphrase']);
+  const report = (await rpc(db, 'anon', 'select get_site_visit_report($1, 30) as report', ['local-test-passphrase'])).rows[0].report;
+  assert.deepEqual(report.sessions, { total: 2, returning: 1, new: 1 });
+  assert.equal(report.referrers[0].referrer_host, 'www.google.com');
+  assert.equal(report.devices[0].device, 'mobile');
+  await assert.rejects(rpc(db, 'anon', 'select get_site_visit_report($1, 30)', ['wrong-key']), /合言葉が違います/);
+});
