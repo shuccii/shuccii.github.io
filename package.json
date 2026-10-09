@@ -11,7 +11,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "astro": "astro",
-    "test:security": "node --test tests/database-security.test.mjs tests/site-safety.test.mjs tests/media-privacy.test.mjs",
+    "test:security": "node --test tests/database-security.test.mjs tests/site-safety.test.mjs tests/media-privacy.test.mjs tests/media-strip.test.mjs",
     "privacy:check": "node scripts/check-media.mjs",
     "privacy:sanitize": "node scripts/check-media.mjs --sanitize",
     "admin": "astro dev --host 127.0.0.1 --port 4321"

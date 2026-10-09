@@ -1,4 +1,5 @@
 import { applySiteEdits } from "../lib/site-edits";
+import { stripLocationMetadata } from "../lib/media-strip.js";
 
 // 公開版はPATでGitHub保存、開発版の紹介文はローカルへ保存。
 // 秘密はメモリだけに保持し、ブラウザストレージには書かない。
@@ -48,7 +49,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
       : location.pathname === "/blog/"
       ? `
         <h2 id="blog-editor-heading">新しいブログ記事</h2>
-        <p class="content-editor-note">${import.meta.env.DEV ? "本文はMarkdownで書けます。画像・動画を選ぶと、記事と一緒にアップロードされます。" : "本文はMarkdownで書けます。写真・動画の追加はローカル管理画面をご利用ください。"}</p>
+        <p class="content-editor-note">本文はMarkdownで書けます。画像・動画を選ぶと、位置情報を取り除いてから記事と一緒にアップロードされます。</p>
         <form id="blog-publish-form">
           <p id="blog-editing-note" class="content-editor-note" hidden></p>
           <label>タイトル<input name="title" required maxlength="120" /></label>
@@ -69,14 +70,6 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
           <button type="submit">アップロード</button>
         </form>
       `;
-    if (!import.meta.env.DEV) {
-      const note = document.createElement("p");
-      note.className = "content-editor-note";
-      note.textContent = "写真・動画の追加は位置情報保護のため、このMacのローカル管理画面から行ってください。文章の編集・記事の追加・削除はPATで保存できます。";
-      panel.prepend(note);
-      panel.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach(input => { input.disabled = true; });
-      panel.querySelector<HTMLButtonElement>('#media-upload-form button[type="submit"]')?.setAttribute("disabled", "");
-    }
     document.body.appendChild(panel);
     const dateInput = panel.querySelector<HTMLInputElement>('input[name="date"]');
     if (dateInput) {
@@ -187,20 +180,30 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
   };
 
   const uploadMedia = async (file: File, token: string) => {
-    if (!isDev) throw new Error("写真・動画の追加は、位置情報を除去できるローカル管理画面から行ってください。文章の編集・記事の追加・削除はこの公開画面で使えます。");
     const kind = mediaType(file);
     if (!kind) throw new Error(`${file.name} は対応していない形式です`);
     if (file.size > 50 * 1024 * 1024) throw new Error(`${file.name} は50MBを超えています`);
     const safeName = file.name.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-");
     const name = `${Date.now()}-${safeName}`;
     const directory = kind === "photo" ? "src/assets/photos" : "src/assets/videos";
-    const editToken = await requestToken("editToken", "ローカル管理パスワードを入力してください");
-    if (!editToken) throw new Error("メディアの安全確認には管理パスワードが必要です");
-    const sanitized = await fetch(`/__sanitize-media?name=${encodeURIComponent(name)}`, {
-      method: "POST", headers: { "Content-Type": "application/octet-stream", "X-Edit-Token": editToken }, body: file,
-    });
-    if (!sanitized.ok) throw new Error("メディアの位置情報を除去できませんでした。公開を中止しました");
-    await putGithubFile(`${directory}/${name}`, encodeBytesBase64(new Uint8Array(await sanitized.arrayBuffer())), token, `content: upload ${kind}`);
+    let bytes: Uint8Array;
+    if (isDev) {
+      const editToken = await requestToken("editToken", "ローカル管理パスワードを入力してください");
+      if (!editToken) throw new Error("メディアの安全確認には管理パスワードが必要です");
+      const sanitized = await fetch(`/__sanitize-media?name=${encodeURIComponent(name)}`, {
+        method: "POST", headers: { "Content-Type": "application/octet-stream", "X-Edit-Token": editToken }, body: file,
+      });
+      if (!sanitized.ok) throw new Error("メディアの位置情報を除去できませんでした。公開を中止しました");
+      bytes = new Uint8Array(await sanitized.arrayBuffer());
+    } else {
+      // 公開画面ではブラウザ内で位置情報を除去し、元のファイルは送信しない。
+      try {
+        bytes = stripLocationMetadata(new Uint8Array(await file.arrayBuffer()));
+      } catch (error) {
+        throw new Error(`${file.name}: ${error instanceof Error ? error.message : "位置情報を除去できませんでした"}`);
+      }
+    }
+    await putGithubFile(`${directory}/${name}`, encodeBytesBase64(bytes), token, `content: upload ${kind}`);
     return { kind, name };
   };
 
