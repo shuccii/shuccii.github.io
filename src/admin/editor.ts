@@ -94,60 +94,11 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
   const githubApi = "https://api.github.com/repos/shuccii/shuccii.github.io/contents/";
 
   const tokens = new Map<string, string>();
-  const requestToken = async (key: string, message: string): Promise<string | undefined> => {
-    const cached = tokens.get(key);
-    if (cached) return cached;
-    const dialog = document.createElement("dialog");
-    dialog.id = "edit-token-dialog";
-    Object.assign(dialog.style, { border: "1px solid #ccc", borderRadius: "16px", padding: "24px", maxWidth: "420px", width: "calc(100% - 48px)", background: "#fff", color: "#222" });
-    dialog.innerHTML = `<form><label><span style="display:block;white-space:pre-line;margin-bottom:12px"></span><input name="token" type="password" autocomplete="off" required style="box-sizing:border-box;width:100%;padding:12px" /></label><p>このタブのメモリだけで保持します。</p><div style="display:flex;gap:12px"><button type="submit">編集を始める</button><button type="button" data-cancel>キャンセル</button></div></form>`;
-    const form = dialog.querySelector<HTMLFormElement>("form")!;
-    const input = dialog.querySelector<HTMLInputElement>("input")!;
-    dialog.querySelector("span")!.textContent = message;
-    document.body.appendChild(dialog);
-    return new Promise((resolve) => {
-      let value: string | undefined;
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        value = input.value.trim() || undefined;
-        if (!value) return;
-        tokens.set(key, value);
-        dialog.close();
-      });
-      dialog.querySelector("[data-cancel]")!.addEventListener("click", () => dialog.close());
-      dialog.addEventListener("close", () => {
-        input.value = "";
-        dialog.remove();
-        resolve(value);
-      }, { once: true });
-      dialog.showModal();
-      input.focus();
-    });
-  };
-  const notify = (message: string) => {
-    let notice = document.querySelector<HTMLParagraphElement>("#edit-notice");
-    if (!notice) {
-      notice = document.createElement("p");
-      notice.id = "edit-notice";
-      notice.setAttribute("role", "alert");
-      Object.assign(notice.style, { position: "fixed", bottom: "80px", right: "16px", maxWidth: "420px", padding: "16px", background: "#fff", color: "#222", zIndex: "10000", whiteSpace: "pre-line" });
-      document.body.appendChild(notice);
-    }
-    notice.textContent = message;
-  };
-  const confirmAction = (message: string): Promise<boolean> => {
-    const dialog = document.createElement("dialog");
-    Object.assign(dialog.style, { borderRadius: "16px", padding: "24px", maxWidth: "420px", background: "#fff", color: "#222" });
-    dialog.innerHTML = '<p></p><button type="button" data-yes>削除する</button> <button type="button" data-no>キャンセル</button>';
-    dialog.querySelector("p")!.textContent = message;
-    document.body.appendChild(dialog);
-    return new Promise(resolve => {
-      let confirmed = false;
-      dialog.querySelector("[data-yes]")!.addEventListener("click", () => { confirmed = true; dialog.close(); });
-      dialog.querySelector("[data-no]")!.addEventListener("click", () => dialog.close());
-      dialog.addEventListener("close", () => { dialog.remove(); resolve(confirmed); }, { once: true });
-      dialog.showModal();
-    });
+  const requestToken = (key: string, message: string) => {
+    let token = tokens.get(key);
+    if (!token) token = prompt(message)?.trim() || undefined;
+    if (token) tokens.set(key, token);
+    return token;
   };
   const getGithubToken = () => requestToken(tokenKey,
     "GitHub fine-grained PATを入力してください\n(repoのContents: Read and write権限が必要です)");
@@ -340,7 +291,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
 
       }
       toggleBtn.textContent = "保存に失敗";
-      notify(`${error instanceof Error ? error.message : "保存に失敗しました"}\nトークンの権限と有効期限を確認してください。`);
+      alert(`${error instanceof Error ? error.message : "保存に失敗しました"}\nトークンの権限と有効期限を確認してください。`);
     } finally {
       toggleBtn.disabled = false;
       cancelBtn.disabled = false;
@@ -376,7 +327,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
     if (files.length === 0) return;
     const kind = form.dataset.kind;
     if (files.some((file) => mediaType(file) !== kind)) {
-      notify(kind === "photo" ? "画像ファイルを選択してください。" : "対応する動画ファイルを選択してください。");
+      alert(kind === "photo" ? "画像ファイルを選択してください。" : "対応する動画ファイルを選択してください。");
       return;
     }
     const token = await getGithubToken();
@@ -387,7 +338,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
       form.reset();
       showPublished(form, "✓ GitHubに保存しました。公開反映まで少し待ってください。");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "アップロードに失敗しました");
+      alert(error instanceof Error ? error.message : "アップロードに失敗しました");
     } finally {
       setFormBusy(form, false, "アップロード");
     }
@@ -455,7 +406,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
         blogForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.textContent = "変更を保存";
         document.getElementById("content-editor")?.scrollTo({ top: 0, behavior: "smooth" });
       } catch (error) {
-        notify(error instanceof Error ? error.message : "記事を読み込めませんでした");
+        alert(error instanceof Error ? error.message : "記事を読み込めませんでした");
       }
     });
   });
@@ -467,7 +418,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
       const message = button.dataset.deleteLabel ?? (isMedia
         ? "このファイルを削除しますか？ブログ記事からの参照も表示されなくなります。"
         : "この記事を削除しますか？添付済みの写真・動画は削除されません。");
-      if (!path || !await confirmAction(message)) return;
+      if (!path || !confirm(message)) return;
       const token = await getGithubToken();
       if (!token) return;
       button.disabled = true;
@@ -482,7 +433,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
         setTimeout(() => location.reload(), 3500);
       } catch (error) {
         button.disabled = false;
-        notify(error instanceof Error ? error.message : "削除に失敗しました");
+        alert(error instanceof Error ? error.message : "削除に失敗しました");
       }
     });
   });
@@ -515,7 +466,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
       resetBlogForm();
       showPublished(form, updated ? "✓ 変更をGitHubに保存しました。公開反映まで少し待ってください。" : "✓ 記事をGitHubに保存しました。公開反映まで少し待ってください。");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "記事の保存に失敗しました");
+      alert(error instanceof Error ? error.message : "記事の保存に失敗しました");
     } finally {
       setFormBusy(form, false, editingPost ? "変更を保存" : "記事を公開");
     }
@@ -568,7 +519,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
         workForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.textContent = "変更を保存";
         document.getElementById("content-editor")?.scrollTo({ top: 0, behavior: "smooth" });
       } catch (error) {
-        notify(error instanceof Error ? error.message : "登録内容を読み込めませんでした");
+        alert(error instanceof Error ? error.message : "登録内容を読み込めませんでした");
       }
     });
   });
@@ -611,7 +562,7 @@ if (document.querySelector("[data-edit]") || contentAuthoringPage) {
       resetWorkForm();
       showPublished(form, updated ? "✓ 変更をGitHubに保存しました。公開反映まで少し待ってください。" : "✓ GitHubに保存しました。公開反映まで少し待ってください。");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "登録に失敗しました");
+      alert(error instanceof Error ? error.message : "登録に失敗しました");
     } finally {
       setFormBusy(form, false, editingWork ? "変更を保存" : "登録する");
     }
