@@ -1,0 +1,16 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout title="ローカル管理 | 余白の庭" noindex={true}>
+  <h1>サイトの管理</h1>
+  <p>この画面は、このMacで起動した管理サーバーからだけ使えます。</p>
+  <ul>
+    <li><a href="/">トップ・紹介文を編集</a></li>
+    <li><a href="/blog/">ブログの追加・編集</a></li>
+    <li><a href="/photos/">写真の追加・削除</a></li>
+    <li><a href="/videos/">動画の追加・削除</a></li>
+    <li><a href="/works/">作品の追加・編集</a></li>
+  </ul>
+  <p>各画面の「編集」から操作します。写真・動画は位置情報を除去してから保存します。</p>
+  <p>紹介文はローカルに保存します。ブログ・写真・動画・作品をGitHubへ保存すると公開が更新されます。保存前に内容を確認してください。</p>
+</Layout>

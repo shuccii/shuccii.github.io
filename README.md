@@ -2,48 +2,56 @@
 
 Astroで作った個人サイトです。GitHub Pagesで公開しています。
 
-## 開発
+## ローカル管理画面
 
 ```sh
-npm install
-npm run dev
+npm ci
+npm run admin
 ```
 
-開発サーバーでは、画面右下の「✎ 編集」から編集できます。保存時はローカルの
-`src/data/site.json` に書き戻します。編集パスワードは、プロジェクト直下の
-`.edit-secret` に設定してください。このファイルはGit管理対象外です。
+起動時に表示される `http://127.0.0.1:<port>/admin/` を開いてください。
+管理画面と編集スクリプトは開発サーバーだけに存在し、公開ビルドには含めません。
+サーバーはループバックに限定し、保存APIは同一Originと `.edit-secret` を検証します。
+`.edit-secret` に長いランダムな編集パスワードを設定してください(Git管理対象外)。
 
-## 公開サイトでの編集
+ページ内テキストはローカルの `src/data/site.json` に保存します。
+ブログ・写真・動画・作品の編集はGitHub Contents APIへ保存し、コミットと公開更新を行います。
+公開する内容を確認してから保存してください。PATはブラウザのメモリだけで保持し、
+タブを閉じると消えます。公開サイトではトークンを入力しません。
 
-GitHub Pagesは静的サイトのため、編集内容の保存先としてGitHub Contents APIを使います。
-画面右下の「✎ 編集」を押すと、GitHubのfine-grained Personal Access Token (PAT)を求められます。
+PATはfine-grainedで `shuccii/shuccii.github.io` だけを対象とし、
+ContentsのRead and write権限と必要最小限の有効期限を指定してください。
 
-PATは次の条件で作成してください。
-
-- Repository access: `Only select repositories` → `shuccii/shuccii.github.io`
-- Repository permissions: `Contents` → `Read and write`
-- 有効期限は必要な期間だけにする
-
-入力したPATはブラウザのセッション中だけ保持し、サイト側へ送信せずGitHub APIへ直接送ります。
-保存すると `src/data/site.json` の更新コミットが作成され、GitHub Actionsの再ビルド後に公開サイトへ反映されます。
-
-ページ内テキストは `site.json` に、ブログ記事はMarkdownファイルとして保存されます。
-
-## Webからの投稿・メディア追加
-
-公開サイトの `/blog/`、`/photos/`、`/videos/` で「✎ 編集」を押すと、ブラウザからコンテンツを追加できます。
+管理画面から各ページへ移動して「✎ 編集」を押すと追加・変更できます。
 
 - ブログ: タイトル、日付、説明、タグ、Markdown本文、画像・動画の添付
 - 写真: jpg / jpeg / png / webp / gif
 - 動画: mp4 / webm / mov
 
-メディアは1ファイル50MBまでです。ブログへ添付したメディアは、記事・写真・動画ページに自動で関連付けられます。
+メディアは1ファイル50MBまでです。GitHubへの送信前にローカルサーバーで
+位置情報を除去し、除去・確認に失敗したファイルは送信しません。
+
+## 写真・動画の位置情報
+
+```sh
+npm run privacy:sanitize
+npm run privacy:check
+```
+
+手動でファイルを追加した場合も、コミット前に実行してください。
+撮影位置のメタデータを除去し、画像の向き・色プロファイルを保持します。
+画像・音声・映像を再圧縮しません。ソースとビルド成果物を検査し、
+位置情報が残った場合はビルドを止めます。場所が写っている画像自体や
+本文・ファイル名の情報は人が確認する必要があります。
+
+現在のファイルを置き換えても過去のGitコミットにある原本は残ります。
+既に公開した位置情報の回収は保証できません。履歴削除には別の対応が必要です。
 
 ## 作ったもの(/works/)
 
 出版物・発表、アプリ・ツール、Webサイトを `/works/` に載せられます。
 
-公開サイトの `/works/` で「✎ 編集」を押すと、ブラウザから追加・編集・削除できます。
+ローカル管理画面の `/works/` で「✎ 編集」を押すと、ブラウザから追加・編集・削除できます。
 入力するのは、種類(出版物 / アプリ / Webサイト)、タイトル、公開日、説明、掲載先、
 公開ページのURL、ソースコードのURL、使った技術、タグ、本文です。
 
@@ -196,3 +204,10 @@ npm run build
 検証: `npm run test:security` はPGliteの隔離PostgreSQL/pgcryptoで実際のSQLを実行します。
 匿名権限、UUID・ページ・ロール変更、分/日上限、保存件数上限、通常投稿・返信・GOOD解除、旧移行と認証失敗を確認します。
 単一接続のPGliteでは複数DB接続間のロック競合・稼働Supabase設定は検証できません。
+
+### 本番への適用確認
+
+GitHubへのpushはSupabaseのSQLを更新しません。管理者が
+`supabase/security-upgrade.sql` を適用した後、`supabase/verify-production.sql`
+の読み取り検証で全項目がtrueになることを確認してください。
+コード上の制限と本番の適用状態を別々に扱います。

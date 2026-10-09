@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # 型チェック。デプロイとは独立に走らせて結果だけ見えるようにする。
+  # セキュリティ回帰テストと型チェックを公開前に必須にする。
   check:
-    name: Type check
+    name: Security and type check
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,11 +29,9 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      # Layout.astro のインラインスクリプトに型注釈がなく、現時点で97件のエラーが出る。
-      # まずは件数を見えるようにするだけにして、デプロイは止めない。
-      # エラーを解消したら continue-on-error を外して必須チェックにする。
+      - name: Run security regression tests
+        run: npm run test:security
       - name: Run astro check
-        continue-on-error: true
         run: npm run check
 
   build:
@@ -56,7 +54,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: build
+    needs: [build, check]
     runs-on: ubuntu-latest
     permissions:
       pages: write
