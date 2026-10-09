@@ -83,8 +83,8 @@ const csp = [
   "media-src 'self' blob:",
   "font-src 'self'",
   `frame-src ${embedOrigins.join(" ")}`,
-  `connect-src 'self' ${supabaseConnectSrc} https://cloudflareinsights.com https://ipwho.is https://get.geojs.io` +
-    (import.meta.env.DEV ? " https://api.github.com http://localhost:* ws://localhost:*" : ""),
+  `connect-src 'self' ${supabaseConnectSrc} https://cloudflareinsights.com https://ipwho.is https://get.geojs.io https://api.github.com` +
+    (import.meta.env.DEV ? " http://localhost:* ws://localhost:*" : ""),
   "upgrade-insecure-requests",
 ].join("; ");
 const bgMedia = await Promise.all(
@@ -492,8 +492,8 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
     </script>
 
     <script>
-      // 静的公開ビルドでは編集モジュールと秘密入力処理を除去する。
-      if (import.meta.env.DEV) void import("../admin/editor");
+      // 公開版はPAT、開発版はローカル保存で編集する。
+      import "../admin/editor";
     </script>
 
     <!-- 地域(国・都道府県・市区町村)だけのアクセス記録 -->
