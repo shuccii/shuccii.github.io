@@ -26,8 +26,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite": "0.5.10",
     "exiftool-vendored": "39.0.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
