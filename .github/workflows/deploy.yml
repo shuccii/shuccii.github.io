@@ -3,14 +3,18 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # main へのPRでも検査とビルドを走らせ、マージ前に失敗に気づけるようにする(公開はしない)。
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 # 既定では何の権限も与えず、必要なジョブにだけ最小限を付与する。
 permissions: {}
 
+# 公開は1本ずつ順番に。PRは公開と別の列にし、新しいpushが来たら古い検査を止める。
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # セキュリティ回帰テストと型チェックを公開前に必須にする。
@@ -55,6 +59,8 @@ jobs:
   deploy:
     name: Deploy
     needs: [build, check]
+    # 公開は main だけ。PRでは検査とビルドで止める。
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
