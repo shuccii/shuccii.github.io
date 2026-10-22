@@ -141,6 +141,11 @@ import site from "../data/site.json";
     color: var(--text-muted);
   }
 
+  /* 編集モード向けの案内なので、訪問者には表示しない */
+  :global(body:not(.editing)) .sns-note {
+    display: none;
+  }
+
   @media (max-width: 520px) {
     .profile,
     .skills {
