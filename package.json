@@ -17,8 +17,8 @@
     "admin": "astro dev --host 127.0.0.1 --port 4321"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.4",
-    "astro": "^7.4.0"
+    "@astrojs/sitemap": "^3.7.6",
+    "astro": "^7.4.13"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
