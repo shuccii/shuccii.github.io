@@ -15,12 +15,27 @@ export function pickBackgroundIndex(media: Media[], last: number, first: boolean
   return pool[Math.floor(random * pool.length)];
 }
 
+/**
+ * 通信量を節約する設定(データセーバー / Save-Data)のブラウザでは背景動画を外す。
+ * 静止画が1枚もなければ、背景が空にならないよう元の一覧を使う。
+ */
+export function selectBackgroundMedia(media: Media[], saveData: boolean): Media[] {
+  if (!saveData) return media;
+  const images = media.filter((item) => item.type === "image");
+  return images.length ? images : media;
+}
+
+function prefersSavingData(): boolean {
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+  return nav.connection?.saveData === true;
+}
+
 export function initializeBackground(): void {
   const data = document.getElementById("background-media");
   const a = document.getElementById("bg-a");
   const b = document.getElementById("bg-b");
   if (!data || !a || !b) return;
-  const media: Media[] = JSON.parse(data.textContent || "[]");
+  const media = selectBackgroundMedia(JSON.parse(data.textContent || "[]") as Media[], prefersSavingData());
   if (!media.length) return;
   const layers = [a, b];
   let showing = 1;

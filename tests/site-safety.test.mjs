@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applySiteEdits } from "../src/lib/site-edits.ts";
-import { pickBackgroundIndex } from "../src/lib/background.ts";
+import { pickBackgroundIndex, selectBackgroundMedia } from "../src/lib/background.ts";
 import { readStorage, writeStorage, removeStorage } from "../src/lib/storage.ts";
 
 test("site text edits preserve other data and reject invalid batches atomically", () => {
@@ -80,4 +80,13 @@ test("frame guard only blocks embedding by other origins", async () => {
   };
   assert.equal(isForeignFrame({ self: {}, top: crossOriginParent, location: self }), true);
   assert.equal(isForeignFrame({ self: {}, top: { location: { origin: "https://evil.example" } }, location: self }), true);
+});
+
+test("data saver drops background videos but never leaves the background empty", () => {
+  const image = { id: "photo", type: "image", url: "/photo", mobileUrl: "/photo", brightness: 100 };
+  const video = { id: "film", type: "video", url: "/film" };
+  assert.deepEqual(selectBackgroundMedia([image, video], false), [image, video]);
+  assert.deepEqual(selectBackgroundMedia([image, video], true), [image]);
+  assert.deepEqual(selectBackgroundMedia([video], true), [video]);
+  assert.deepEqual(selectBackgroundMedia([], true), []);
 });

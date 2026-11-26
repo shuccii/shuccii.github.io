@@ -36,7 +36,8 @@ const current = Astro.url.pathname;
 const initialBackground = await getImage({
   src: initialBackgroundSource,
   width: 1920,
-  quality: 100,
+  // 背景一覧のモバイル版と同じ設定にして、プリロードした画像をそのまま使い回す。
+  quality: 90,
 });
 
 // SNSでリンクを共有したときのカード画像(1200x630)。背景写真から切り出す。
@@ -94,11 +95,11 @@ const bgMedia = await Promise.all(
   getBackgroundMedia().map(async (media) => {
     if (media.type !== "image") return { ...media, id: media.url };
 
-    // 元写真の画質は100のまま、背景表示に十分な解像度へ変換する。
+    // 解像度は落とさず、圧縮の画質だけ90にする(100と見た目はほぼ同じで、サイズは半分前後)。
     // モバイルでも縦画面の cover 表示で解像感を落とさないよう1920pxを確保する。
     const [mobile, desktop] = await Promise.all([
-      getImage({ src: media.image, width: 1920, quality: 100 }),
-      getImage({ src: media.image, width: 2880, quality: 100 }),
+      getImage({ src: media.image, width: 1920, quality: 90 }),
+      getImage({ src: media.image, width: 2880, quality: 90 }),
     ]);
 
     return {
