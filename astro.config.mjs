@@ -7,6 +7,7 @@ import os from "node:os";
 import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import { applySiteEdits } from "./src/lib/site-edits";
 import { publicationPrivacy, sanitizeMedia } from "./scripts/media-privacy.mjs";
+import { assetsInlineLimit } from "./scripts/build-safety.mjs";
 
 const SITE_JSON = path.resolve("./src/data/site.json");
 const SECRET_FILE = path.resolve("./.edit-secret");
@@ -125,6 +126,8 @@ export default defineConfig({
     build: {
       // 標準版とSafari版のbackdrop-filterを両方残す。
       cssMinify: "esbuild",
+      // JSはHTMLへ埋め込まず外部ファイルにする(CSPから 'unsafe-inline' を外すため)。
+      assetsInlineLimit,
     },
   },
   server: { host: "127.0.0.1" },

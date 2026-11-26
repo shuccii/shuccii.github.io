@@ -4,6 +4,7 @@ import VisitLogger from "../components/VisitLogger.astro";
 import { getImage } from "astro:assets";
 import initialBackgroundSource from "../assets/backgrounds/bg-city-dusk.jpg";
 import site from "../data/site.json";
+import { scriptSrc } from "../../scripts/build-safety.mjs";
 
 interface Props {
   title: string;
@@ -77,7 +78,9 @@ const csp = [
   "base-uri 'self'",
   "object-src 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+  // スクリプトは全て外部ファイル(astro.config.mjs の assetsInlineLimit)なので
+  // 本番では 'unsafe-inline' を許可しない。
+  scriptSrc(import.meta.env.DEV),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
@@ -176,6 +179,11 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
       content={csp}
     />
     <title>{title}</title>
+    <script>
+      // 他サイトの iframe に埋め込まれたら中身を隠す(クリックジャッキング対策)。
+      import { guardAgainstFraming } from "../lib/frame-guard";
+      guardAgainstFraming();
+    </script>
   </head>
   <body class="background-light">
     <!-- 印刷時は動的背景とは分離した固定レイヤーを各ページへ描画する -->
@@ -513,6 +521,21 @@ const activeSns = snsDefs.filter((s) => (sns[s.key] ?? "").trim() !== "");
 </html>
 
 <style is:global>
+  /* 他サイトの iframe 内で開かれたときの表示(src/lib/frame-guard.ts) */
+  html[data-framed] body {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+  html[data-framed] body > :not(.frame-guard-link) {
+    display: none !important;
+  }
+  .frame-guard-link {
+    color: inherit;
+    font-size: 1rem;
+  }
+
   :root {
     --text: #18232e;
     --text-muted: #465666;
