@@ -32,9 +32,9 @@ const blocks = await Promise.all(
     if (media?.type !== "image") return { ...block, media };
 
     const [small, medium, large] = await Promise.all([
-      getImage({ src: media.image, width: 672, quality: 100 }),
-      getImage({ src: media.image, width: 1080, quality: 100 }),
-      getImage({ src: media.image, width: 1440, quality: 100 }),
+      getImage({ src: media.image, width: 672, quality: 90 }),
+      getImage({ src: media.image, width: 1080, quality: 90 }),
+      getImage({ src: media.image, width: 1440, quality: 90 }),
     ]);
 
     return {
